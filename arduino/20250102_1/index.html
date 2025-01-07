@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monaco Editor Example</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.30.1/min/vs/loader.min.js"></script>
+    <style>
+        html {
+            padding: 0;
+            margin: 0;
+            height: 100vh;
+            width: 100vw;
+        }
+    </style>
+</head>
+<body>
+    <div id="editor" style="width:100vw;height:100vh"></div>
+
+    <script>
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.30.1/min/vs' }});
+        require(['vs/editor/editor.main'], function() {
+            fetch('https://raw.githubusercontent.com/MinecraftPEayer/class/master/sketch_jan02a.ino')
+                .then(response => response.text())
+                .then(data => {
+                    var editor = monaco.editor.create(document.getElementById('editor'), {
+                        value: data,
+                        language: 'cpp',
+                        theme: 'vs-dark',
+                        bracketPairColorization: {
+                            enabled: true
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching the file:', error);
+                });
+        });
+    </script>
+</body>
+</html>
