@@ -1,101 +1,223 @@
+'use client'
 import Image from "next/image";
+import Avatar from "@public/avatar.png";
+import DiscordLogo from '@public/logos/discord.svg'
+import GitHubLogo from '@public/logos/github.svg'
+import TwitterLogo from '@public/logos/twitter.svg'
+import TelegramLogo from '@public/logos/telegram.svg';
+import { motion } from "framer-motion";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+type Repository = {
+    name: string;
+    description: string;
+    language: string;
+    stars: number;
+    image: string;
+}
+
+const repositories: Repository[] = [
+    {
+        name: "minecraftpeayer.github.io",
+        description: "My personal website",
+        language: "TypeScript",
+        stars: 0,
+        image: "/avatar.png"
+    },
+    // 可以添加更多倉庫
+];
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const router = useRouter();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+    const container = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.2,
+                duration: 0.8
+            }
+        }
+    };
+
+    const item = {
+        hidden: { opacity: 0, y: 20 },
+        show: { 
+            opacity: 1, 
+            y: 0,
+            transition: {
+                duration: 0.8,
+                ease: "easeOut"
+            }
+        }
+    };
+
+    const menuItems = [
+        { name: 'Home', href: '/' },
+        { name: 'About', href: '/about' },
+        { name: 'Projects', href: '/projects' },
+        { name: 'Blog', href: '/blog' }
+    ];
+
+    return (
+        <motion.div 
+            className="p-8 bg-gray-950 min-h-[100vh] w-[100vw] relative"
+            variants={container}
+            initial="hidden"
+            animate="show"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+            <motion.div id="profile" className="flex h-40" variants={item}>
+                <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ 
+                        type: "spring", 
+                        stiffness: 100, 
+                        damping: 20,
+                        duration: 1
+                    }}
+                >
+                    <Image
+                        src={Avatar}
+                        width={128}
+                        height={128}
+                        alt="avatar"
+                        className="rounded-full m-4"
+                    />
+                </motion.div>
+                <div className="p-2 py-[50px]" >
+                    <motion.p 
+                        className="text-2xl"
+                        variants={item}
+                    ><b>MinecraftPEayer</b></motion.p>
+                    <motion.p 
+                        className="text-gray-700 text-sm"
+                        variants={item}
+                    >Just a noob Full-Stack developer</motion.p>
+                </div>
+            </motion.div>
+            
+            <motion.div id="links" variants={item}>
+                <motion.p className="mb-4 text-2xl" variants={item}><b>Links</b></motion.p>
+                <motion.div variants={container}>
+                    {[
+                        { href: "https://discord.com/users/minecraftpeayer", icon: DiscordLogo, text: "@minecraftpeayer", hoverColor: "#5865F2" },
+                        { href: "https://github.com/MinecraftPEayer", icon: GitHubLogo, text: "MinecraftPEayer", hoverColor: "#24292e" },
+                        { href: "https://twitter.com/MinecraftPEayer", icon: TwitterLogo, text: "@MinecraftPEayer", hoverColor: "#1DA1F2" },
+                        { href: "https://t.me/MinecraftPEayer", icon: TelegramLogo, text: "@MinecraftPEayer", hoverColor: "#0088cc" }
+                    ].map((link, index) => (
+                        <motion.a 
+                            key={link.href}
+                            href={link.href} 
+                            target="_blank" 
+                            className="block"
+                            variants={item}
+                        >
+                            <div className={`w-full h-20 bg-gray-900 hover:bg-[${link.hoverColor}] rounded-xl mt-2 p-6 flex flex-1 items-center transition-colors`}>
+                                <link.icon className="w-8 h-8" />
+                                <p className="text-lg flex-1 text-center"><b>{link.text}</b></p>
+                            </div>
+                        </motion.a>
+                    ))}
+                </motion.div>
+            </motion.div>
+            
+            <motion.div id="repositories" variants={item} className="mt-12">
+                <p className="text-2xl mb-6"><b>Active Repositories</b></p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {repositories.map((repo, index) => (
+                        <motion.div
+                            key={repo.name}
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            transition={{ 
+                                duration: 0.8, 
+                                delay: index * 0.2,
+                                ease: "easeOut"
+                            }}
+                            className="bg-gray-900 p-4 rounded-xl relative overflow-hidden group"
+                            style={{
+                                backgroundImage: `url(${repo.image})`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center left',
+                            }}
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-gray-900/50 to-gray-900 z-0" />
+                            <div className="relative z-10">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h3 className="text-xl font-bold">{repo.name}</h3>
+                                        <p className="text-gray-400 text-sm">{repo.description}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-yellow-400">★</span>
+                                        <span className="text-sm">{repo.stars}</span>
+                                    </div>
+                                </div>
+                                <div className="mt-4">
+                                    <span className="text-sm text-gray-400">{repo.language}</span>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            </motion.div>
+
+            <div className="fixed bottom-8 right-8 z-50">
+                <motion.button
+                    initial={{ scale: 0 }}
+                    animate={{ 
+                        scale: 1,
+                        rotate: isMenuOpen ? 180 : 0
+                    }}
+                    transition={{ duration: 0.3 }}
+                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                    className="w-12 h-12 bg-gray-800 hover:bg-gray-700 rounded-full flex items-center justify-center shadow-lg cursor-pointer"
+                >
+                    <svg 
+                        className="w-6 h-6 text-white" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                    >
+                        <path 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            strokeWidth={2} 
+                            d="M4 6h16M4 12h16m-7 6h7"
+                        />
+                    </svg>
+                </motion.button>
+
+                <motion.div
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ 
+                        opacity: isMenuOpen ? 1 : 0,
+                        scale: isMenuOpen ? 1 : 0
+                    }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute bottom-14 right-0 mb-2"
+                >
+                    <div className="bg-gray-800 rounded-lg shadow-lg p-2 min-w-[120px]">
+                        {menuItems.map((item) => (
+                            <motion.button
+                                key={item.href}
+                                onClick={() => {
+                                    router.push(item.href);
+                                    setIsMenuOpen(false);
+                                }}
+                                className="w-full text-left px-4 py-2 text-white hover:bg-gray-700 rounded transition-colors block"
+                                whileHover={{ scale: 1.05 }}
+                            >
+                                {item.name}
+                            </motion.button>
+                        ))}
+                    </div>
+                </motion.div>
+            </div>
+        </motion.div>
+    );
 }
