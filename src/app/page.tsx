@@ -50,12 +50,7 @@ export default function Home() {
         },
     };
 
-    const menuItems = [
-        { name: 'Home', href: '/' },
-        { name: 'About', href: '/about' },
-        { name: 'Projects', href: '/projects' },
-        { name: 'Blog', href: '/blog' },
-    ];
+    const menuItems = [{ name: 'Home', href: '/' }];
 
     const socialLinks = [
         {
