@@ -1,7 +1,6 @@
 'use client';
 import Image from 'next/image';
 import Avatar from '@public/avatar.png';
-// Change SVG imports to Image components
 import DiscordLogo from '@public/logos/discord.svg';
 import GitHubLogo from '@public/logos/github.svg';
 import TwitterLogo from '@public/logos/twitter.svg';
@@ -26,7 +25,6 @@ const repositories: Repository[] = [
         stars: 0,
         image: '/avatar.png',
     },
-    // 可以添加更多倉庫
 ];
 
 export default function Home() {
@@ -63,6 +61,8 @@ export default function Home() {
         { name: 'Blog', href: '/blog' },
     ];
 
+    const iconClassName = 'w-8 h-8 fill-current text-white';
+
     return (
         <motion.div
             className="p-8 bg-gray-950 min-h-[100vh] w-[100vw] relative"
@@ -93,7 +93,10 @@ export default function Home() {
                     <motion.p className="text-2xl" variants={item}>
                         <b>MinecraftPEayer</b>
                     </motion.p>
-                    <motion.p className="text-gray-700 text-sm" variants={item}>
+                    <motion.p
+                        className="text-gray-600 text-base"
+                        variants={item}
+                    >
                         Just a noob Full-Stack developer
                     </motion.p>
                 </div>
@@ -107,25 +110,25 @@ export default function Home() {
                     {[
                         {
                             href: 'https://discord.com/users/minecraftpeayer',
-                            icon: DiscordLogo.src,
+                            icon: <DiscordLogo className={iconClassName} />,
                             text: '@minecraftpeayer',
                             hoverColor: '#5865F2',
                         },
                         {
                             href: 'https://github.com/MinecraftPEayer',
-                            icon: GitHubLogo.src,
+                            icon: <GitHubLogo className={iconClassName} />,
                             text: 'MinecraftPEayer',
                             hoverColor: '#24292e',
                         },
                         {
                             href: 'https://twitter.com/MinecraftPEayer',
-                            icon: TwitterLogo.src,
+                            icon: <TwitterLogo className={iconClassName} />,
                             text: '@MinecraftPEayer',
                             hoverColor: '#1DA1F2',
                         },
                         {
                             href: 'https://t.me/MinecraftPEayer',
-                            icon: TelegramLogo.src,
+                            icon: <TelegramLogo className={iconClassName} />,
                             text: '@MinecraftPEayer',
                             hoverColor: '#0088cc',
                         },
@@ -134,18 +137,14 @@ export default function Home() {
                             key={link.href}
                             href={link.href}
                             target="_blank"
-                            className="block"
+                            className="block bg-gray-900 rounded-xl"
+                            whileHover={{ backgroundColor: link.hoverColor }}
                             variants={item}
                         >
                             <div
-                                className={`w-full h-20 bg-gray-900 hover:bg-[${link.hoverColor}] rounded-xl mt-2 p-6 flex flex-1 items-center transition-colors`}
+                                className={`w-full h-20 mt-2 p-6 flex flex-1 items-center`}
                             >
-                                <Image
-                                    src={link.icon}
-                                    alt=""
-                                    width={32}
-                                    height={32}
-                                />
+                                {link.icon}
                                 <p className="text-lg flex-1 text-center">
                                     <b>{link.text}</b>
                                 </p>
@@ -165,16 +164,23 @@ export default function Home() {
                             key={repo.name}
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
+                            whileHover={{
+                                backgroundSize: '110%',
+                            }}
                             transition={{
                                 duration: 0.8,
                                 delay: index * 0.2,
                                 ease: 'easeOut',
+                                backgroundSize: {
+                                    duration: 0.3,
+                                    ease: 'easeOut',
+                                },
                             }}
                             className="bg-gray-900 p-4 rounded-xl relative overflow-hidden group"
                             style={{
                                 backgroundImage: `url(${repo.image})`,
-                                backgroundSize: 'cover',
-                                backgroundPosition: 'center left',
+                                backgroundSize: '100%',
+                                backgroundPosition: 'center',
                             }}
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-gray-900/50 to-gray-900 z-0" />
