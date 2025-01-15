@@ -1,6 +1,7 @@
 'use client';
 import Image from 'next/image';
 import Avatar from '@public/avatar.png';
+// Change SVG imports to Image components
 import DiscordLogo from '@public/logos/discord.svg';
 import GitHubLogo from '@public/logos/github.svg';
 import TwitterLogo from '@public/logos/twitter.svg';
@@ -106,25 +107,25 @@ export default function Home() {
                     {[
                         {
                             href: 'https://discord.com/users/minecraftpeayer',
-                            icon: DiscordLogo,
+                            icon: DiscordLogo.src,
                             text: '@minecraftpeayer',
                             hoverColor: '#5865F2',
                         },
                         {
                             href: 'https://github.com/MinecraftPEayer',
-                            icon: GitHubLogo,
+                            icon: GitHubLogo.src,
                             text: 'MinecraftPEayer',
                             hoverColor: '#24292e',
                         },
                         {
                             href: 'https://twitter.com/MinecraftPEayer',
-                            icon: TwitterLogo,
+                            icon: TwitterLogo.src,
                             text: '@MinecraftPEayer',
                             hoverColor: '#1DA1F2',
                         },
                         {
                             href: 'https://t.me/MinecraftPEayer',
-                            icon: TelegramLogo,
+                            icon: TelegramLogo.src,
                             text: '@MinecraftPEayer',
                             hoverColor: '#0088cc',
                         },
@@ -139,7 +140,12 @@ export default function Home() {
                             <div
                                 className={`w-full h-20 bg-gray-900 hover:bg-[${link.hoverColor}] rounded-xl mt-2 p-6 flex flex-1 items-center transition-colors`}
                             >
-                                <link.icon className="w-8 h-8" />
+                                <Image
+                                    src={link.icon}
+                                    alt=""
+                                    width={32}
+                                    height={32}
+                                />
                                 <p className="text-lg flex-1 text-center">
                                     <b>{link.text}</b>
                                 </p>
