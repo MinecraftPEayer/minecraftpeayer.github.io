@@ -105,7 +105,7 @@ export default function Home() {
                         className="rounded-full m-4"
                     />
                 </motion.div>
-                <div className="p-2 py-[50px]">
+                <div className="ml-6 py-[50px]">
                     <motion.p className="text-2xl" variants={item}>
                         <b>MinecraftPEayer</b>
                     </motion.p>
