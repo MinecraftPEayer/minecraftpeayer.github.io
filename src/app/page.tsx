@@ -1,10 +1,6 @@
 'use client';
 import Image from 'next/image';
 import Avatar from '@public/avatar.png';
-import DiscordLogo from '@public/logos/discord.svg';
-import GitHubLogo from '@public/logos/github.svg';
-import TwitterLogo from '@public/logos/twitter.svg';
-import TelegramLogo from '@public/logos/telegram.svg';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -61,7 +57,32 @@ export default function Home() {
         { name: 'Blog', href: '/blog' },
     ];
 
-    const iconClassName = 'w-8 h-8 fill-current text-white';
+    const socialLinks = [
+        {
+            href: 'https://discord.com/users/minecraftpeayer',
+            icon: '/logos/discord.svg',
+            text: '@minecraftpeayer',
+            hoverColor: '#5865F2',
+        },
+        {
+            href: 'https://github.com/MinecraftPEayer',
+            icon: '/logos/github.svg',
+            text: 'MinecraftPEayer',
+            hoverColor: '#24292e',
+        },
+        {
+            href: 'https://twitter.com/MinecraftPEayer',
+            icon: '/logos/twitter.svg',
+            text: '@MinecraftPEayer',
+            hoverColor: '#1DA1F2',
+        },
+        {
+            href: 'https://t.me/MinecraftPEayer',
+            icon: '/logos/telegram.svg',
+            text: '@MinecraftPEayer',
+            hoverColor: '#0088cc',
+        },
+    ];
 
     return (
         <motion.div
@@ -107,32 +128,7 @@ export default function Home() {
                     <b>Links</b>
                 </motion.p>
                 <motion.div variants={container}>
-                    {[
-                        {
-                            href: 'https://discord.com/users/minecraftpeayer',
-                            icon: <DiscordLogo className={iconClassName} />,
-                            text: '@minecraftpeayer',
-                            hoverColor: '#5865F2',
-                        },
-                        {
-                            href: 'https://github.com/MinecraftPEayer',
-                            icon: <GitHubLogo className={iconClassName} />,
-                            text: 'MinecraftPEayer',
-                            hoverColor: '#24292e',
-                        },
-                        {
-                            href: 'https://twitter.com/MinecraftPEayer',
-                            icon: <TwitterLogo className={iconClassName} />,
-                            text: '@MinecraftPEayer',
-                            hoverColor: '#1DA1F2',
-                        },
-                        {
-                            href: 'https://t.me/MinecraftPEayer',
-                            icon: <TelegramLogo className={iconClassName} />,
-                            text: '@MinecraftPEayer',
-                            hoverColor: '#0088cc',
-                        },
-                    ].map((link) => (
+                    {socialLinks.map((link) => (
                         <motion.a
                             key={link.href}
                             href={link.href}
@@ -144,7 +140,13 @@ export default function Home() {
                             <div
                                 className={`w-full h-20 mt-2 p-6 flex flex-1 items-center`}
                             >
-                                {link.icon}
+                                <Image
+                                    src={link.icon}
+                                    alt={link.text}
+                                    width={32}
+                                    height={32}
+                                    className="text-white"
+                                />
                                 <p className="text-lg flex-1 text-center">
                                     <b>{link.text}</b>
                                 </p>
