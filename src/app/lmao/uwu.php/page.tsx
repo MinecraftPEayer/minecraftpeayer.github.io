@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-    themeColor: 0xFF0000
+    themeColor: '#FF0000'
 }
 
 const Lmao = () => {
