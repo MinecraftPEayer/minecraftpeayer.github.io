@@ -2,7 +2,7 @@
     
 import type { Metadata, Viewport } from 'next';
 
-export const metadata: Metadata = {
+const metadata: Metadata = {
     openGraph: {
         title: '這是臺灣媒體認為的詐騙網站',
         description: '因為這不是https而且還有php',
