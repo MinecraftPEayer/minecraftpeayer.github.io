@@ -93,7 +93,7 @@ export default function MaimaiAudioTool() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (event) => {
-      const text = event.target.result as string;
+      const text = event.target?.result as string;
       const data: Record<string, string> = {};
       let title = 'Unknown';
       let bpm = 120;
@@ -141,7 +141,8 @@ export default function MaimaiAudioTool() {
     if (foundMaida && maidaFileRef.current) {
       const dt = new DataTransfer(); dt.items.add(foundMaida);
       maidaFileRef.current.files = dt.files;
-      const event = { target: { files: dt.files } } as any;
+      // 使用 unknown 轉型避免 TypeScript 錯誤
+      const event = { target: { files: dt.files } } as unknown as React.ChangeEvent<HTMLInputElement>;
       handleMaidataChange(event);
     }
     if (foundSong && foundMaida) setStatus(`✅ 成功載入：${foundSong.name} 與 maidata.txt！`);
@@ -151,13 +152,13 @@ export default function MaimaiAudioTool() {
   };
 
   const parseSimaiTime = (chartString: string) => {
-    let rawTimes: number[] = [];
+    const rawTimes: number[] = [];
     let currentBpm = globalBpm;
     let currentBeat = 4;
     let currentTime = firstOffset;
-    let chunks = chartString.replace(/\|\|.*/g, '').replace(/\s+/g, '').split(',');
+    const chunks = chartString.replace(/\|\|.*/g, '').replace(/\s+/g, '').split(',');
 
-    for (let chunk of chunks) {
+    for (const chunk of chunks) {
       if (chunk === '' || chunk === 'E') {
         currentTime += (60 / currentBpm) * 4 / currentBeat;
         continue;
@@ -167,7 +168,7 @@ export default function MaimaiAudioTool() {
       const beatMatch = chunk.match(/\{([\d.]+)\}/);
       if (beatMatch) currentBeat = parseFloat(beatMatch[1]);
 
-      let noteArea = chunk.replace(/\([\d.]+\)/g, '').replace(/\{[\d.]+\}/g, '');
+      const noteArea = chunk.replace(/\([\d.]+\)/g, '').replace(/\{[\d.]+\}/g, '');
       if (/[1-8A-E]/.test(noteArea)) rawTimes.push(currentTime);
 
       const holdMatches = [...noteArea.matchAll(/h\[([\d.:#]+)\]/g)];
@@ -187,35 +188,37 @@ export default function MaimaiAudioTool() {
   };
 
   const bufferToMp3Async = async (abuffer: AudioBuffer, onProgress: (c: number, t: number) => Promise<void>) => {
-    let nCh = abuffer.numberOfChannels;
-    let sampleRate = abuffer.sampleRate;
-    let totalLen = abuffer.length;
-    let leftData = abuffer.getChannelData(0);
-    let rightData = nCh > 1 ? abuffer.getChannelData(1) : leftData;
+    const nCh = abuffer.numberOfChannels;
+    const sampleRate = abuffer.sampleRate;
+    const totalLen = abuffer.length;
+    const leftData = abuffer.getChannelData(0);
+    const rightData = nCh > 1 ? abuffer.getChannelData(1) : leftData;
 
-    // @ts-ignore
-    let mp3encoder = new window.lamejs.Mp3Encoder(2, sampleRate, 192);
-    let mp3Data = [];
+    // @ts-expect-error - lamejs 透過 CDN 載入，全域變數可能缺乏型別定義
+    const mp3encoder = new window.lamejs.Mp3Encoder(2, sampleRate, 192);
+    const mp3Data: Int8Array[] = [];
     const sampleBlockSize = 1152 * 40; 
     
     for (let i = 0; i < totalLen; i += sampleBlockSize) {
-      let end = Math.min(i + sampleBlockSize, totalLen);
-      let len = end - i;
-      let leftChunk = new Int16Array(len);
-      let rightChunk = new Int16Array(len);
+      const end = Math.min(i + sampleBlockSize, totalLen);
+      const len = end - i;
+      const leftChunk = new Int16Array(len);
+      const rightChunk = new Int16Array(len);
       
       for(let j = 0; j < len; j++) {
-        let sL = Math.max(-1, Math.min(1, leftData[i+j])); leftChunk[j] = sL < 0 ? sL * 32768 : sL * 32767;
-        let sR = Math.max(-1, Math.min(1, rightData[i+j])); rightChunk[j] = sR < 0 ? sR * 32768 : sR * 32767;
+        const sL = Math.max(-1, Math.min(1, leftData[i+j])); 
+        leftChunk[j] = sL < 0 ? sL * 32768 : sL * 32767;
+        const sR = Math.max(-1, Math.min(1, rightData[i+j])); 
+        rightChunk[j] = sR < 0 ? sR * 32768 : sR * 32767;
       }
 
-      let mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
+      const mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
       if (mp3buf.length > 0) mp3Data.push(mp3buf);
       if (onProgress) await onProgress(end, totalLen);
     }
     
-    let mp3buf = mp3encoder.flush();
-    if (mp3buf.length > 0) mp3Data.push(mp3buf);
+    const finalMp3buf = mp3encoder.flush();
+    if (finalMp3buf.length > 0) mp3Data.push(finalMp3buf);
     return new Blob(mp3Data, {type: 'audio/mp3'});
   };
 
@@ -225,7 +228,8 @@ export default function MaimaiAudioTool() {
     const selectedKey = diffSelectRef.current?.value;
 
     if (!songFile || !hitFile || !selectedKey) return alert('檔案不足！');
-    // @ts-ignore
+    
+    // @ts-expect-error - 檢查全域的 lamejs 是否存在
     if (typeof window.lamejs === 'undefined') return alert('MP3 編碼器載入失敗，請確認網路連線。');
 
     const diffLabel = DIFF_NAMES[selectedKey.split('_')[1]] || "Difficulty";
@@ -253,9 +257,9 @@ export default function MaimaiAudioTool() {
       songSource.start(0);
 
       for (let i = 0; i < totalNotes; i += noteChunk) {
-        let end = Math.min(i + noteChunk, totalNotes);
+        const end = Math.min(i + noteChunk, totalNotes);
         for (let j = i; j < end; j++) {
-          let t = hitTimes[j];
+          const t = hitTimes[j];
           if (t >= 0 && t < songBuf.duration) {
             const hitSource = ctxWith.createBufferSource();
             hitSource.buffer = hitBuf;
@@ -275,9 +279,9 @@ export default function MaimaiAudioTool() {
       // 2. Without BGM
       const ctxWithout = new OfflineAudioContext(songBuf.numberOfChannels, songBuf.length, songBuf.sampleRate);
       for (let i = 0; i < totalNotes; i += noteChunk) {
-        let end = Math.min(i + noteChunk, totalNotes);
+        const end = Math.min(i + noteChunk, totalNotes);
         for (let j = i; j < end; j++) {
-          let t = hitTimes[j];
+          const t = hitTimes[j];
           if (t >= 0 && t < songBuf.duration) {
             const hitSource = ctxWithout.createBufferSource();
             hitSource.buffer = hitBuf;
@@ -320,7 +324,7 @@ export default function MaimaiAudioTool() {
         <input 
           type="file" 
           onChange={handleFolderSelect}
-          // @ts-ignore
+          // @ts-expect-error - webkitdirectory 在 HTML input 中是存在的，但 TypeScript 預設的 DOM 型別並未包含
           webkitdirectory="" directory="" 
           className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer"
         />
@@ -381,7 +385,6 @@ export default function MaimaiAudioTool() {
         </div>
       )}
 
-      {/* AI Generated Footer */}
       <div className="mt-12 text-center text-xs text-gray-400 font-mono tracking-widest border-t pt-4">
         This page is AI generated.
       </div>
