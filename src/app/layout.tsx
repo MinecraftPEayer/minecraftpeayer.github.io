@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 import { JetBrains_Mono } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 
-const JetBrainsMono = JetBrains_Mono({
-    display: 'swap',
-    subsets: ['latin'],
+const jetbrainsMonoNerd = localFont({
+  src: '../../public/fonts/JetBrainsMonoNerdFont-Regular.ttf',
+  variable: '--font-nerd',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -20,10 +22,11 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body
-                className={`${JetBrainsMono.className} font-mono antialiased`}
+                className={`${jetbrainsMonoNerd.variable} font-mono antialiased`}
             >
                 {children}
             </body>
         </html>
     );
 }
+
