@@ -1,12 +1,11 @@
 import type { Metadata } from 'next';
-import { JetBrains_Mono } from 'next/font/google';
 import localFont from 'next/font/local';
 import './globals.css';
 
 const jetbrainsMonoNerd = localFont({
-  src: '../../public/fonts/JetBrainsMonoNerdFont-Regular.ttf',
-  variable: '--font-nerd',
-  display: 'swap',
+    src: '../../public/fonts/JetBrainsMonoNerdFont-Regular.ttf',
+    variable: '--font-nerd',
+    display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -29,4 +28,3 @@ export default function RootLayout({
         </html>
     );
 }
-
