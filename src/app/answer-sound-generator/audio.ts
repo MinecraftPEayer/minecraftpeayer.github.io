@@ -8,6 +8,7 @@ export interface RenderOptions {
     events: AnswerEvent[];
     includeBgm: boolean;
     answerVolume: number;
+    breakVolume: number;
     onProgress?: (progress: number) => Promise<void>;
 }
 
@@ -30,6 +31,7 @@ export async function renderAnswerTrack({
     events,
     includeBgm,
     answerVolume,
+    breakVolume,
     onProgress,
 }: RenderOptions) {
     const sampleRate = song.sampleRate;
@@ -60,16 +62,26 @@ export async function renderAnswerTrack({
     answerGain.gain.value = answerVolume;
     answerGain.connect(limiter);
 
+    const breakGain = context.createGain();
+    breakGain.gain.value = breakVolume;
+    breakGain.connect(limiter);
+
     const chunkSize = 250;
     for (let index = 0; index < events.length; index += chunkSize) {
         const chunk = events.slice(index, index + chunkSize);
         for (const event of chunk) {
             if (event.time < 0 || event.time >= duration) continue;
-            const source = context.createBufferSource();
-            source.buffer =
-                event.kind === 'break' && breakSound ? breakSound : normalSound;
-            source.connect(answerGain);
-            source.start(event.time);
+            const answerSource = context.createBufferSource();
+            answerSource.buffer = normalSound;
+            answerSource.connect(answerGain);
+            answerSource.start(event.time);
+
+            if (event.kind === 'break' && breakSound) {
+                const breakSource = context.createBufferSource();
+                breakSource.buffer = breakSound;
+                breakSource.connect(breakGain);
+                breakSource.start(event.time);
+            }
         }
         await onProgress?.(Math.min(1, (index + chunk.length) / events.length));
         await yieldToBrowser();

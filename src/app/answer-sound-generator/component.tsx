@@ -79,6 +79,7 @@ export default function MaimaiAudioTool() {
     const [showPaste, setShowPaste] = useState(false);
     const [difficulty, setDifficulty] = useState('');
     const [answerVolume, setAnswerVolume] = useState(1);
+    const [breakVolume, setBreakVolume] = useState(1);
     const [status, setStatus] = useState(
         '選擇歌曲資料夾，或逐一加入需要的檔案。',
     );
@@ -228,6 +229,7 @@ export default function MaimaiAudioTool() {
                 events: timeline.events,
                 includeBgm: true,
                 answerVolume,
+                breakVolume,
                 onProgress: (value) =>
                     updateProgress(14 + value * 10, '正在配置含 BGM 正解音…'),
             });
@@ -243,6 +245,7 @@ export default function MaimaiAudioTool() {
                 events: timeline.events,
                 includeBgm: false,
                 answerVolume,
+                breakVolume,
                 onProgress: (value) =>
                     updateProgress(57 + value * 10, '正在配置純正解音…'),
             });
@@ -422,7 +425,7 @@ export default function MaimaiAudioTool() {
                                 <FilePicker
                                     id="normal-answer-file"
                                     label="一般正解音"
-                                    hint="所有非 Break 判定使用"
+                                    hint="每個判定時點都會播放"
                                     file={normalSoundFile}
                                     accept="audio/*"
                                     icon={AudiotrackRoundedIcon}
@@ -431,7 +434,7 @@ export default function MaimaiAudioTool() {
                                 <FilePicker
                                     id="break-answer-file"
                                     label="Break 正解音"
-                                    hint="未選擇時沿用一般正解音"
+                                    hint="Break 時額外疊加；未選擇則不疊加"
                                     file={breakSoundFile}
                                     accept="audio/*"
                                     icon={BoltRoundedIcon}
@@ -622,9 +625,54 @@ export default function MaimaiAudioTool() {
                                                     aria-label="正解音音量"
                                                 />
                                             </Box>
-                                            <Tooltip title="同一判定時點只播放一次；同時含 Break 時使用 Break 音。">
+                                            <Box sx={{ flex: 1 }}>
+                                                <Stack
+                                                    direction="row"
+                                                    spacing={1}
+                                                    sx={{
+                                                        alignItems: 'center',
+                                                    }}
+                                                >
+                                                    <BoltRoundedIcon
+                                                        color="secondary"
+                                                        fontSize="small"
+                                                    />
+                                                    <Typography
+                                                        sx={{ fontWeight: 750 }}
+                                                    >
+                                                        Break 音效音量
+                                                    </Typography>
+                                                    <Typography
+                                                        color="secondary.main"
+                                                        sx={{ fontWeight: 750 }}
+                                                    >
+                                                        {Math.round(
+                                                            breakVolume * 100,
+                                                        )}
+                                                        %
+                                                    </Typography>
+                                                </Stack>
+                                                <Slider
+                                                    color="secondary"
+                                                    value={breakVolume}
+                                                    min={0.1}
+                                                    max={1.5}
+                                                    step={0.05}
+                                                    disabled={
+                                                        isProcessing ||
+                                                        !breakSoundFile
+                                                    }
+                                                    onChange={(_, value) =>
+                                                        setBreakVolume(
+                                                            value as number,
+                                                        )
+                                                    }
+                                                    aria-label="Break 音效音量"
+                                                />
+                                            </Box>
+                                            <Tooltip title="同一時點的一般正解音只播放一次；若含 Break，再額外疊加一次 Break 音效。">
                                                 <Chip
-                                                    label="同拍自動去重"
+                                                    label="同拍去重 + Break 疊加"
                                                     variant="outlined"
                                                 />
                                             </Tooltip>
