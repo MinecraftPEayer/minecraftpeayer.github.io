@@ -1,539 +1,710 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import Script from 'next/script';
+import {
+    Alert,
+    Box,
+    Button,
+    Card,
+    CardContent,
+    Chip,
+    Container,
+    CssBaseline,
+    Divider,
+    FormControl,
+    InputLabel,
+    LinearProgress,
+    MenuItem,
+    Paper,
+    Select,
+    Slider,
+    Stack,
+    TextField,
+    ThemeProvider,
+    Tooltip,
+    Typography,
+} from '@mui/material';
+import AudiotrackRoundedIcon from '@mui/icons-material/AudiotrackRounded';
+import BoltRoundedIcon from '@mui/icons-material/BoltRounded';
+import FolderOpenRoundedIcon from '@mui/icons-material/FolderOpenRounded';
+import InsertDriveFileRoundedIcon from '@mui/icons-material/InsertDriveFileRounded';
+import MusicNoteRoundedIcon from '@mui/icons-material/MusicNoteRounded';
+import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { decodeAudioFile, encodeMp3, renderAnswerTrack } from './audio';
+import { buildAnswerTimeline, parseMaidata, type Maidata } from './simai';
+import { FilePicker, ResultPlayer, toolTheme, type OutputFile } from './ui';
 
-const DIFF_NAMES: Record<string, string> = {
-    '1': 'EASY',
-    '2': 'BASIC',
-    '3': 'ADVANCED',
-    '4': 'EXPERT',
-    '5': 'MASTER',
-    '6': 'Re:MASTER',
+const DIFFICULTY_NAMES: Record<number, string> = {
+    1: 'EASY',
+    2: 'BASIC',
+    3: 'ADVANCED',
+    4: 'EXPERT',
+    5: 'MASTER',
+    6: 'Re:MASTER',
+    7: 'ORIGINAL',
 };
 
-// --- 自訂播放器元件 ---
-const CustomAudioPlayer = ({
-    src,
-    duration,
-    filename,
-    title,
-}: {
-    src: string;
-    duration: number;
-    filename: string;
-    title: string;
-}) => {
-    const audioRef = useRef<HTMLAudioElement>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [currentTime, setCurrentTime] = useState(0);
+const getDirectory = (file: File) => {
+    const path = file.webkitRelativePath;
+    return path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
+};
 
-    const togglePlay = () => {
-        if (audioRef.current) {
-            if (isPlaying) audioRef.current.pause();
-            else audioRef.current.play();
-            setIsPlaying(!isPlaying);
-        }
-    };
-
-    const formatTime = (secs: number) => {
-        if (isNaN(secs)) return '0:00';
-        const m = Math.floor(secs / 60);
-        const s = Math.floor(secs % 60)
-            .toString()
-            .padStart(2, '0');
-        return `${m}:${s}`;
-    };
-
-    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const time = Number(e.target.value);
-        if (audioRef.current) audioRef.current.currentTime = time;
-        setCurrentTime(time);
-    };
-
-    return (
-        <div className="p-4 bg-gray-50 rounded-lg border">
-            <h3 className="font-bold text-gray-800 mb-3">{title}</h3>
-            <audio
-                ref={audioRef}
-                src={src}
-                onTimeUpdate={() =>
-                    setCurrentTime(audioRef.current?.currentTime || 0)
-                }
-                onEnded={() => {
-                    setIsPlaying(false);
-                    setCurrentTime(0);
-                }}
-            />
-            <div className="flex items-center gap-3">
-                <button
-                    onClick={togglePlay}
-                    className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-blue-600 text-white rounded-full hover:bg-blue-700 transition"
-                >
-                    {isPlaying ? '⏸' : '▶'}
-                </button>
-                <span className="text-sm font-mono w-10 text-right text-gray-600">
-                    {formatTime(currentTime)}
-                </span>
-                <input
-                    type="range"
-                    min="0"
-                    max={duration || 100}
-                    step="0.1"
-                    value={currentTime}
-                    onChange={handleSeek}
-                    className="flex-1 h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                />
-                <span className="text-sm font-mono w-10 text-gray-600">
-                    {formatTime(duration)}
-                </span>
-            </div>
-            <a
-                href={src}
-                download={filename}
-                className="mt-4 block text-center py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-bold transition"
-            >
-                 下載 MP3
-            </a>
-        </div>
+function findSongFolderFiles(files: File[]) {
+    const maidatas = files.filter((file) =>
+        /(^|\/)maidata\.txt$/i.test(file.webkitRelativePath || file.name),
     );
-};
+    const tracks = files.filter((file) =>
+        /^track\.(mp3|wav|ogg|m4a|aac)$/i.test(file.name),
+    );
+
+    for (const maidata of maidatas) {
+        const song = tracks.find(
+            (candidate) => getDirectory(candidate) === getDirectory(maidata),
+        );
+        if (song) return { maidata, song };
+    }
+    return { maidata: maidatas[0], song: tracks[0] };
+}
+
+const safeFilename = (value: string) =>
+    value.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').trim() || 'Untitled';
 
 export default function MaimaiAudioTool() {
-    const [status, setStatus] = useState('等待上傳檔案...');
+    const [songFile, setSongFile] = useState<File | null>(null);
+    const [maidataFile, setMaidataFile] = useState<File | null>(null);
+    const [normalSoundFile, setNormalSoundFile] = useState<File | null>(null);
+    const [breakSoundFile, setBreakSoundFile] = useState<File | null>(null);
+    const [maidata, setMaidata] = useState<Maidata | null>(null);
+    const [maidataText, setMaidataText] = useState('');
+    const [showPaste, setShowPaste] = useState(false);
+    const [difficulty, setDifficulty] = useState('');
+    const [answerVolume, setAnswerVolume] = useState(1);
+    const [status, setStatus] = useState(
+        '選擇歌曲資料夾，或逐一加入需要的檔案。',
+    );
+    const [error, setError] = useState<string | null>(null);
     const [progress, setProgress] = useState(0);
-    const [chartData, setChartData] = useState<Record<string, string>>({});
-    const [songTitle, setSongTitle] = useState('Unknown');
-    const [globalBpm, setGlobalBpm] = useState(120);
-    const [firstOffset, setFirstOffset] = useState(0);
-    const [songDuration, setSongDuration] = useState(0);
-    const [results, setResults] = useState<{
-        withBgm?: string;
-        withoutBgm?: string;
-        filenames: string[];
-    }>({ filenames: [] });
     const [isProcessing, setIsProcessing] = useState(false);
+    const [outputs, setOutputs] = useState<OutputFile[]>([]);
+    const outputUrls = useRef<string[]>([]);
 
-    const songFileRef = useRef<HTMLInputElement>(null);
-    const maidaFileRef = useRef<HTMLInputElement>(null);
-    const hitFileRef = useRef<HTMLInputElement>(null);
-    const diffSelectRef = useRef<HTMLSelectElement>(null);
+    const selectedChart = maidata?.charts.find(
+        (chart) => chart.key === difficulty,
+    );
+    const timeline = useMemo(
+        () =>
+            selectedChart && maidata
+                ? buildAnswerTimeline(selectedChart)
+                : null,
+        [maidata, selectedChart],
+    );
+    const breakCount =
+        timeline?.events.filter((event) => event.kind === 'break').length ?? 0;
 
-    const updateProgress = async (percent: number, text: string) => {
-        setProgress(percent);
-        setStatus(text);
-        await new Promise((resolve) => setTimeout(resolve, 5));
-    };
+    const clearOutputs = useCallback(() => {
+        outputUrls.current.forEach((url) => URL.revokeObjectURL(url));
+        outputUrls.current = [];
+        setOutputs([]);
+    }, []);
 
-    const handleMaidataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const text = event.target?.result as string;
-            const data: Record<string, string> = {};
-            let title = 'Unknown';
-            let bpm = 120;
-            let offset = 0;
-            const tagRegex = /&([a-zA-Z0-9_]+)=([\s\S]*?)(?=\n&|&|$)/g;
-            let match;
-            while ((match = tagRegex.exec(text)) !== null) {
-                const key = match[1].toLowerCase();
-                const val = match[2].trim();
-                if (key.startsWith('inote_')) data[key] = val;
-                else if (key === 'title') title = val;
-                else if (key === 'bpm') bpm = parseFloat(val) || 120;
-                else if (key === 'first') offset = parseFloat(val) || 0;
-            }
-            setChartData(data);
-            setSongTitle(title);
-            setGlobalBpm(bpm);
-            setFirstOffset(offset);
-            setStatus(`已載入譜面：${title}`);
-        };
-        reader.readAsText(file);
-    };
+    useEffect(() => clearOutputs, [clearOutputs]);
 
-    const handleSongChange = () => {
-        if (maidaFileRef.current) maidaFileRef.current.value = '';
-        setChartData({});
-        setSongTitle('Unknown');
-    };
-
-    const handleFolderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (!files) return;
-        let foundSong, foundMaida;
-        for (let i = 0; i < files.length; i++) {
-            const f = files[i];
-            const name = f.name.toLowerCase();
-            if (name.startsWith('track.') && /\.(mp3|wav|ogg)$/.test(name))
-                foundSong = f;
-            if (name === 'maidata.txt') foundMaida = f;
-        }
-        if (foundSong && songFileRef.current) {
-            const dt = new DataTransfer();
-            dt.items.add(foundSong);
-            songFileRef.current.files = dt.files;
-            handleSongChange();
-        }
-        if (foundMaida && maidaFileRef.current) {
-            const dt = new DataTransfer();
-            dt.items.add(foundMaida);
-            maidaFileRef.current.files = dt.files;
-            // 使用 unknown 轉型避免 TypeScript 錯誤
-            const event = {
-                target: { files: dt.files },
-            } as unknown as React.ChangeEvent<HTMLInputElement>;
-            handleMaidataChange(event);
-        }
-        if (foundSong && foundMaida)
-            setStatus(`成功載入：${foundSong.name} 與 maidata.txt！`);
-        else if (foundSong || foundMaida)
+    const parseMaidataSource = useCallback((source: string, file?: File) => {
+        setError(null);
+        try {
+            const parsed = parseMaidata(source);
+            const preferred =
+                parsed.charts.find((chart) => chart.difficulty === 5) ??
+                parsed.charts.at(-1);
+            if (file) setMaidataFile(file);
+            setMaidata(parsed);
+            setDifficulty(preferred?.key ?? '');
+            setShowPaste(false);
             setStatus(
-                `僅找到 ${foundSong ? foundSong.name : foundMaida!.name}，請手動補齊。`,
+                `已讀取「${parsed.title}」的 ${parsed.charts.length} 個難度。`,
             );
-        else setStatus(`未在資料夾中找到 track.* 或 maidata.txt。`);
-        e.target.value = '';
+        } catch (caught) {
+            setMaidata(null);
+            setDifficulty('');
+            setError(
+                caught instanceof Error
+                    ? `Simai 解析失敗：${caught.message}`
+                    : 'Simai 解析失敗，請確認 maidata.txt 格式。',
+            );
+        }
+    }, []);
+
+    const loadMaidata = useCallback(
+        async (file: File) => {
+            setError(null);
+            setMaidataFile(file);
+            try {
+                const source = await file.text();
+                parseMaidataSource(source, file);
+            } catch (caught) {
+                setMaidata(null);
+                setDifficulty('');
+                setShowPaste(true);
+                const reason =
+                    caught instanceof DOMException &&
+                    caught.name === 'NotReadableError'
+                        ? '瀏覽器無法取得此檔案的內容。這常發生於手機 PWA、雲端或網路掛載路徑；可改用下方文字貼上功能。'
+                        : caught instanceof Error
+                          ? caught.message
+                          : '瀏覽器無法讀取 maidata.txt。';
+                setError(`讀檔失敗：${reason}`);
+            }
+        },
+        [parseMaidataSource],
+    );
+
+    const handleFolderSelect = async (files: FileList | null) => {
+        if (!files?.length) return;
+        setError(null);
+        const found = findSongFolderFiles(Array.from(files));
+        if (found.song) setSongFile(found.song);
+        if (found.maidata) await loadMaidata(found.maidata);
+
+        if (found.song && found.maidata) {
+            setStatus(`已從同一資料夾載入 ${found.song.name} 與 maidata.txt。`);
+        } else if (!found.song && !found.maidata) {
+            setError('資料夾中找不到 maidata.txt 或可支援的 track 音檔。');
+        } else {
+            setError(
+                found.song
+                    ? '已找到 track 音檔，請再選擇 maidata.txt。'
+                    : '已找到 maidata.txt，請再選擇 track.mp3／wav／ogg／m4a。',
+            );
+        }
     };
 
-    const parseSimaiTime = (chartString: string) => {
-        const rawTimes: number[] = [];
-        let currentBpm = globalBpm;
-        let currentBeat = 4;
-        let currentTime = firstOffset;
-        const chunks = chartString
-            .replace(/\|\|.*/g, '')
-            .replace(/\s+/g, '')
-            .split(',');
-
-        for (const chunk of chunks) {
-            if (chunk === '' || chunk === 'E') {
-                currentTime += ((60 / currentBpm) * 4) / currentBeat;
-                continue;
-            }
-            const bpmMatch = chunk.match(/\(([\d.]+)\)/);
-            if (bpmMatch) currentBpm = parseFloat(bpmMatch[1]);
-            const beatMatch = chunk.match(/\{([\d.]+)\}/);
-            if (beatMatch) currentBeat = parseFloat(beatMatch[1]);
-
-            const noteArea = chunk
-                .replace(/\([\d.]+\)/g, '')
-                .replace(/\{[\d.]+\}/g, '');
-            if (/[1-8A-E]/.test(noteArea)) rawTimes.push(currentTime);
-
-            const holdMatches = [...noteArea.matchAll(/h\[([\d.:#]+)\]/g)];
-            holdMatches.forEach((m) => {
-                const content = m[1];
-                let duration = 0;
-                if (content.startsWith('#'))
-                    duration = parseFloat(content.substring(1));
-                else if (content.includes(':')) {
-                    const [hBeat, hLen] = content.split(':').map(parseFloat);
-                    duration = (((60 / currentBpm) * 4) / hBeat) * hLen;
-                }
-                rawTimes.push(currentTime + duration);
-            });
-            currentTime += ((60 / currentBpm) * 4) / currentBeat;
-        }
-        return [
-            ...new Set(rawTimes.map((t) => Math.round(t * 10000) / 10000)),
-        ].sort((a, b) => a - b);
-    };
-
-    const bufferToMp3Async = async (
-        abuffer: AudioBuffer,
-        onProgress: (c: number, t: number) => Promise<void>,
-    ) => {
-        const nCh = abuffer.numberOfChannels;
-        const sampleRate = abuffer.sampleRate;
-        const totalLen = abuffer.length;
-        const leftData = abuffer.getChannelData(0);
-        const rightData = nCh > 1 ? abuffer.getChannelData(1) : leftData;
-
-        // @ts-expect-error - lamejs 透過 CDN 載入，全域變數可能缺乏型別定義
-        const mp3encoder = new window.lamejs.Mp3Encoder(2, sampleRate, 192);
-        const mp3Data: Int8Array[] = [];
-        const sampleBlockSize = 1152 * 40;
-
-        for (let i = 0; i < totalLen; i += sampleBlockSize) {
-            const end = Math.min(i + sampleBlockSize, totalLen);
-            const len = end - i;
-            const leftChunk = new Int16Array(len);
-            const rightChunk = new Int16Array(len);
-
-            for (let j = 0; j < len; j++) {
-                const sL = Math.max(-1, Math.min(1, leftData[i + j]));
-                leftChunk[j] = sL < 0 ? sL * 32768 : sL * 32767;
-                const sR = Math.max(-1, Math.min(1, rightData[i + j]));
-                rightChunk[j] = sR < 0 ? sR * 32768 : sR * 32767;
-            }
-
-            const mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
-            if (mp3buf.length > 0) mp3Data.push(mp3buf);
-            if (onProgress) await onProgress(end, totalLen);
-        }
-
-        const finalMp3buf = mp3encoder.flush();
-        if (finalMp3buf.length > 0) mp3Data.push(finalMp3buf);
-        return new Blob(mp3Data as BlobPart[], { type: 'audio/mp3' });
+    const updateProgress = async (value: number, message: string) => {
+        setProgress(value);
+        setStatus(message);
+        await new Promise<void>((resolve) =>
+            requestAnimationFrame(() => resolve()),
+        );
     };
 
     const startProcess = async () => {
-        const songFile = songFileRef.current?.files?.[0];
-        const hitFile = hitFileRef.current?.files?.[0];
-        const selectedKey = diffSelectRef.current?.value;
+        if (
+            !songFile ||
+            !normalSoundFile ||
+            !maidata ||
+            !selectedChart ||
+            !timeline
+        ) {
+            setError('請先加入歌曲、maidata.txt、一般正解音，並選擇難度。');
+            return;
+        }
+        if (timeline.events.length === 0) {
+            setError('所選譜面沒有可輸出的判定時間。');
+            return;
+        }
 
-        if (!songFile || !hitFile || !selectedKey) return alert('檔案不足！');
-
-        // @ts-expect-error - 檢查全域的 lamejs 是否存在
-        if (typeof window.lamejs === 'undefined')
-            return alert('MP3 編碼器載入失敗，請確認網路連線。');
-
-        const diffLabel = DIFF_NAMES[selectedKey.split('_')[1]] || 'Difficulty';
+        clearOutputs();
+        setError(null);
+        setIsProcessing(true);
+        setProgress(1);
 
         try {
-            setIsProcessing(true);
-            setResults({ filenames: [] });
-            await updateProgress(5, '正在解碼音訊...');
+            await updateProgress(5, '正在解碼歌曲與正解音…');
+            const [song, normalSound, breakSound] = await Promise.all([
+                decodeAudioFile(songFile),
+                decodeAudioFile(normalSoundFile),
+                breakSoundFile
+                    ? decodeAudioFile(breakSoundFile)
+                    : Promise.resolve(undefined),
+            ]);
 
-            const ctx = new AudioContext();
-            const songBuf = await ctx.decodeAudioData(
-                await songFile.arrayBuffer(),
+            await updateProgress(
+                14,
+                `已建立 ${timeline.events.length} 個判定時點，準備含 BGM 版本…`,
             );
-            const hitBuf = await ctx.decodeAudioData(
-                await hitFile.arrayBuffer(),
-            );
-            setSongDuration(songBuf.duration);
-
-            await updateProgress(10, '正在解析譜面時間軸...');
-            const hitTimes = parseSimaiTime(chartData[selectedKey]);
-            const totalNotes = hitTimes.length;
-            const noteChunk = 200;
-
-            // 1. With BGM
-            const ctxWith = new OfflineAudioContext(
-                songBuf.numberOfChannels,
-                songBuf.length,
-                songBuf.sampleRate,
-            );
-            const songSource = ctxWith.createBufferSource();
-            songSource.buffer = songBuf;
-            songSource.connect(ctxWith.destination);
-            songSource.start(0);
-
-            for (let i = 0; i < totalNotes; i += noteChunk) {
-                const end = Math.min(i + noteChunk, totalNotes);
-                for (let j = i; j < end; j++) {
-                    const t = hitTimes[j];
-                    if (t >= 0 && t < songBuf.duration) {
-                        const hitSource = ctxWith.createBufferSource();
-                        hitSource.buffer = hitBuf;
-                        hitSource.connect(ctxWith.destination);
-                        hitSource.start(t);
-                    }
-                }
-                await updateProgress(
-                    10 + (end / totalNotes) * 5,
-                    `準備含BGM圖譜 (${end}/${totalNotes})`,
-                );
-            }
-
-            await updateProgress(15, '正在渲染含BGM音軌...');
-            const withBuf = await ctxWith.startRendering();
-            const withBlob = await bufferToMp3Async(
-                withBuf,
-                async (current, total) => {
-                    await updateProgress(
-                        15 + (current / total) * 35,
-                        `壓縮含BGM的 MP3 (${current}/${total})`,
-                    );
-                },
-            );
-
-            // 2. Without BGM
-            const ctxWithout = new OfflineAudioContext(
-                songBuf.numberOfChannels,
-                songBuf.length,
-                songBuf.sampleRate,
-            );
-            for (let i = 0; i < totalNotes; i += noteChunk) {
-                const end = Math.min(i + noteChunk, totalNotes);
-                for (let j = i; j < end; j++) {
-                    const t = hitTimes[j];
-                    if (t >= 0 && t < songBuf.duration) {
-                        const hitSource = ctxWithout.createBufferSource();
-                        hitSource.buffer = hitBuf;
-                        hitSource.connect(ctxWithout.destination);
-                        hitSource.start(t);
-                    }
-                }
-                await updateProgress(
-                    50 + (end / totalNotes) * 5,
-                    `準備無BGM圖譜 (${end}/${totalNotes})`,
-                );
-            }
-
-            await updateProgress(55, '正在渲染無BGM音軌...');
-            const withoutBuf = await ctxWithout.startRendering();
-            const withoutBlob = await bufferToMp3Async(
-                withoutBuf,
-                async (current, total) => {
-                    await updateProgress(
-                        55 + (current / total) * 45,
-                        `壓縮無BGM的 MP3 (${current}/${total})`,
-                    );
-                },
-            );
-
-            setResults({
-                withBgm: URL.createObjectURL(withBlob),
-                withoutBgm: URL.createObjectURL(withoutBlob),
-                filenames: [
-                    `${songTitle}_${diffLabel}_with_BGM.mp3`,
-                    `${songTitle}_${diffLabel}_without_BGM.mp3`,
-                ],
+            const withBgm = await renderAnswerTrack({
+                song,
+                normalSound,
+                breakSound,
+                events: timeline.events,
+                includeBgm: true,
+                answerVolume,
+                onProgress: (value) =>
+                    updateProgress(14 + value * 10, '正在配置含 BGM 正解音…'),
             });
-            await updateProgress(100, 'MP3 壓縮與合成完成！');
-        } catch (err) {
-            console.error(err);
-            setStatus('發生錯誤，請查看開發者控制台(F12)。');
+            const withBgmBlob = await encodeMp3(withBgm, (value) =>
+                updateProgress(25 + value * 30, '正在編碼含 BGM 的 MP3…'),
+            );
+
+            await updateProgress(57, '正在渲染純正解音版本…');
+            const withoutBgm = await renderAnswerTrack({
+                song,
+                normalSound,
+                breakSound,
+                events: timeline.events,
+                includeBgm: false,
+                answerVolume,
+                onProgress: (value) =>
+                    updateProgress(57 + value * 10, '正在配置純正解音…'),
+            });
+            const withoutBgmBlob = await encodeMp3(withoutBgm, (value) =>
+                updateProgress(68 + value * 30, '正在編碼純正解音的 MP3…'),
+            );
+
+            const title = safeFilename(maidata.title);
+            const diffName =
+                DIFFICULTY_NAMES[selectedChart.difficulty] ?? selectedChart.key;
+            const withBgmUrl = URL.createObjectURL(withBgmBlob);
+            const withoutBgmUrl = URL.createObjectURL(withoutBgmBlob);
+            outputUrls.current = [withBgmUrl, withoutBgmUrl];
+            setOutputs([
+                {
+                    url: withBgmUrl,
+                    filename: `${title}_${diffName}_with_BGM.mp3`,
+                    title: '含背景音樂',
+                    duration: withBgm.duration,
+                },
+                {
+                    url: withoutBgmUrl,
+                    filename: `${title}_${diffName}_answer_only.mp3`,
+                    title: '純正解音',
+                    duration: withoutBgm.duration,
+                },
+            ]);
+            await updateProgress(100, '兩個 MP3 都已完成，可試聽或下載。');
+        } catch (caught) {
+            console.error(caught);
+            setError(
+                caught instanceof Error
+                    ? `處理失敗：${caught.message}`
+                    : '處理失敗，瀏覽器可能不支援其中一個音訊格式。',
+            );
+            setStatus('處理未完成。');
         } finally {
             setIsProcessing(false);
         }
     };
 
+    const folderInputProps = {
+        webkitdirectory: '',
+        directory: '',
+    } as React.InputHTMLAttributes<HTMLInputElement>;
+
     return (
-        <div className="max-w-3xl mx-auto p-8 bg-white shadow-xl rounded-2xl my-10">
-            <Script
-                src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"
-                strategy="beforeInteractive"
-            />
-
-            <h1 className="text-3xl font-bold text-center text-blue-600 mb-8">
-                Maimai 譜面正解音合成器
-            </h1>
-
-            <div className="mb-6 p-5 bg-blue-50 border-2 border-dashed border-blue-300 rounded-xl">
-                <label className="block text-blue-800 font-bold mb-2 text-lg">
-                    󰉖 快速資料夾匯入
-                </label>
-                <input
-                    type="file"
-                    onChange={handleFolderSelect}
-                    // @ts-expect-error - webkitdirectory 在 HTML input 中是存在的，但 TypeScript 預設的 DOM 型別並未包含
-                    webkitdirectory=""
-                    directory=""
-                    className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer"
-                />
-                <p className="text-sm text-gray-500 mt-2">
-                    （自動尋找資料夾中的 <b>track.mp3/wav/ogg</b> 與{' '}
-                    <b>maidata.txt</b>）
-                </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div className="flex flex-col">
-                    <label className="font-semibold text-gray-700 mb-1">
-                        1. 歌曲音檔
-                    </label>
-                    <input
-                        type="file"
-                        ref={songFileRef}
-                        onChange={handleSongChange}
-                        accept="audio/*"
-                        className="border p-2 rounded-lg w-full bg-gray-50"
-                    />
-                </div>
-                <div className="flex flex-col">
-                    <label className="font-semibold text-gray-700 mb-1">
-                        2. maidata.txt
-                    </label>
-                    <input
-                        type="file"
-                        ref={maidaFileRef}
-                        onChange={handleMaidataChange}
-                        accept=".txt"
-                        className="border p-2 rounded-lg w-full bg-gray-50"
-                    />
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div className="flex flex-col">
-                    <label className="font-semibold text-gray-700 mb-1">
-                        3. 正解音 (Answer Sound)
-                    </label>
-                    <input
-                        type="file"
-                        ref={hitFileRef}
-                        accept="audio/*"
-                        className="border p-2 rounded-lg w-full bg-gray-50"
-                    />
-                </div>
-                <div className="flex flex-col">
-                    <label className="font-semibold text-gray-700 mb-1">
-                        4. 選擇難度
-                    </label>
-                    <select
-                        ref={diffSelectRef}
-                        className="border p-2 rounded-lg w-full bg-white"
-                    >
-                        {Object.keys(chartData).length === 0 ? (
-                            <option value="">請先讀取譜面...</option>
-                        ) : (
-                            Object.keys(chartData).map((key) => (
-                                <option key={key} value={key}>
-                                    {DIFF_NAMES[key.split('_')[1]] || key}
-                                </option>
-                            ))
-                        )}
-                    </select>
-                </div>
-            </div>
-
-            <button
-                onClick={startProcess}
-                disabled={isProcessing}
-                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold rounded-xl transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
+        <ThemeProvider theme={toolTheme}>
+            <CssBaseline />
+            <Box
+                component="main"
+                sx={{
+                    minHeight: '100vh',
+                    py: { xs: 4, md: 8 },
+                    background:
+                        'radial-gradient(circle at 12% 5%, rgba(42,143,147,.24), transparent 32rem), radial-gradient(circle at 88% 14%, rgba(255,151,80,.13), transparent 28rem), #07111d',
+                }}
             >
-                {isProcessing ? '處理中...' : '壓縮合成 MP3 音檔'}
-            </button>
+                <Container maxWidth="md">
+                    <Stack spacing={4}>
+                        <Box sx={{ textAlign: 'center' }}>
+                            <Chip
+                                icon={<BoltRoundedIcon />}
+                                label="100% 在瀏覽器內完成"
+                                color="primary"
+                                variant="outlined"
+                                sx={{ mb: 2 }}
+                            />
+                            <Typography
+                                component="h1"
+                                variant="h1"
+                                sx={{
+                                    fontSize: { xs: '2.4rem', md: '3.7rem' },
+                                }}
+                            >
+                                Simai 正解音
+                                <Box component="span" color="primary.main">
+                                    生成器
+                                </Box>
+                            </Typography>
+                            <Typography color="text.secondary" sx={{ mt: 1.5 }}>
+                                讀取 maidata.txt，在正確時點混入音效並輸出 MP3。
+                                檔案不會上傳。
+                            </Typography>
+                        </Box>
 
-            {(progress > 0 || isProcessing) && (
-                <div className="mt-6">
-                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                        <div
-                            className="bg-green-500 h-full transition-all duration-75"
-                            style={{ width: `${progress}%` }}
-                        ></div>
-                    </div>
-                    <p className="text-center mt-2 font-bold text-orange-600">
-                        {status}
-                    </p>
-                </div>
-            )}
+                        <Paper
+                            variant="outlined"
+                            sx={{
+                                p: { xs: 2.5, sm: 3 },
+                                borderStyle: 'dashed',
+                                borderColor: 'rgba(120,231,212,.38)',
+                                bgcolor: 'rgba(120,231,212,.055)',
+                            }}
+                        >
+                            <Stack
+                                direction={{ xs: 'column', sm: 'row' }}
+                                spacing={2}
+                                sx={{
+                                    alignItems: { xs: 'stretch', sm: 'center' },
+                                }}
+                            >
+                                <Box sx={{ flex: 1 }}>
+                                    <Typography
+                                        variant="h6"
+                                        sx={{ fontWeight: 800 }}
+                                    >
+                                        快速匯入歌曲資料夾
+                                    </Typography>
+                                    <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                    >
+                                        優先配對同一層的 maidata.txt 與
+                                        track.mp3／wav／ogg／m4a。
+                                    </Typography>
+                                </Box>
+                                <Button
+                                    component="label"
+                                    variant="contained"
+                                    startIcon={<FolderOpenRoundedIcon />}
+                                    size="large"
+                                >
+                                    選擇資料夾
+                                    <input
+                                        hidden
+                                        type="file"
+                                        {...folderInputProps}
+                                        onChange={(event) => {
+                                            void handleFolderSelect(
+                                                event.target.files,
+                                            );
+                                        }}
+                                    />
+                                </Button>
+                            </Stack>
+                        </Paper>
 
-            {results.withBgm && results.withoutBgm && (
-                <div className="mt-8 space-y-4 border-t pt-8">
-                    <CustomAudioPlayer
-                        src={results.withBgm}
-                        duration={songDuration}
-                        filename={results.filenames[0]}
-                        title="🎵 包含背景音樂 (With BGM) - MP3"
-                    />
-                    <CustomAudioPlayer
-                        src={results.withoutBgm}
-                        duration={songDuration}
-                        filename={results.filenames[1]}
-                        title="🥁 僅正解音 (Without BGM) - MP3"
-                    />
-                </div>
-            )}
+                        <Box>
+                            <Typography
+                                variant="h5"
+                                component="h2"
+                                sx={{ mb: 2 }}
+                            >
+                                1. 準備來源
+                            </Typography>
+                            <Box
+                                sx={{
+                                    display: 'grid',
+                                    gridTemplateColumns: {
+                                        xs: '1fr',
+                                        sm: '1fr 1fr',
+                                    },
+                                    gap: 2,
+                                }}
+                            >
+                                <FilePicker
+                                    id="song-file"
+                                    label="歌曲音檔"
+                                    hint="track.mp3、WAV、OGG 或 M4A"
+                                    file={songFile}
+                                    accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac"
+                                    icon={MusicNoteRoundedIcon}
+                                    onChange={setSongFile}
+                                />
+                                <FilePicker
+                                    id="maidata-file"
+                                    label="Simai 譜面"
+                                    hint="maidata.txt"
+                                    file={maidataFile}
+                                    accept=".txt,text/plain"
+                                    icon={InsertDriveFileRoundedIcon}
+                                    onChange={(file) => {
+                                        if (file) void loadMaidata(file);
+                                    }}
+                                />
+                                <FilePicker
+                                    id="normal-answer-file"
+                                    label="一般正解音"
+                                    hint="所有非 Break 判定使用"
+                                    file={normalSoundFile}
+                                    accept="audio/*"
+                                    icon={AudiotrackRoundedIcon}
+                                    onChange={setNormalSoundFile}
+                                />
+                                <FilePicker
+                                    id="break-answer-file"
+                                    label="Break 正解音"
+                                    hint="未選擇時沿用一般正解音"
+                                    file={breakSoundFile}
+                                    accept="audio/*"
+                                    icon={BoltRoundedIcon}
+                                    optional
+                                    onChange={setBreakSoundFile}
+                                />
+                            </Box>
+                            {showPaste && (
+                                <Paper
+                                    variant="outlined"
+                                    sx={{
+                                        p: 2,
+                                        mt: 2,
+                                        bgcolor: 'rgba(255,126,142,.04)',
+                                    }}
+                                >
+                                    <Stack spacing={1.5}>
+                                        <Typography sx={{ fontWeight: 750 }}>
+                                            瀏覽器無法取得檔案內容？
+                                        </Typography>
+                                        <Typography
+                                            variant="body2"
+                                            color="text.secondary"
+                                        >
+                                            若檔案位於手機文件供應器、網路磁碟或掛載目錄，可直接貼上
+                                            maidata.txt 的完整內容。
+                                        </Typography>
+                                        <TextField
+                                            label="maidata.txt 內容"
+                                            value={maidataText}
+                                            onChange={(event) =>
+                                                setMaidataText(
+                                                    event.target.value,
+                                                )
+                                            }
+                                            multiline
+                                            minRows={5}
+                                            fullWidth
+                                        />
+                                        <Button
+                                            variant="outlined"
+                                            disabled={!maidataText.trim()}
+                                            onClick={() =>
+                                                parseMaidataSource(maidataText)
+                                            }
+                                        >
+                                            解析貼上的內容
+                                        </Button>
+                                    </Stack>
+                                </Paper>
+                            )}
+                        </Box>
 
-            <div className="mt-12 text-center text-xs text-gray-400 font-mono tracking-widest border-t pt-4">
-                This page is AI generated.
-            </div>
-        </div>
+                        <Box>
+                            <Typography
+                                variant="h5"
+                                component="h2"
+                                sx={{ mb: 2 }}
+                            >
+                                2. 譜面與輸出設定
+                            </Typography>
+                            <Card variant="outlined">
+                                <CardContent>
+                                    <Stack spacing={3}>
+                                        <FormControl
+                                            fullWidth
+                                            disabled={!maidata}
+                                        >
+                                            <InputLabel id="difficulty-label">
+                                                難度
+                                            </InputLabel>
+                                            <Select
+                                                labelId="difficulty-label"
+                                                value={difficulty}
+                                                label="難度"
+                                                onChange={(event) =>
+                                                    setDifficulty(
+                                                        event.target.value,
+                                                    )
+                                                }
+                                            >
+                                                {!maidata && (
+                                                    <MenuItem value="">
+                                                        請先讀取 maidata.txt
+                                                    </MenuItem>
+                                                )}
+                                                {maidata?.charts.map(
+                                                    (chart) => (
+                                                        <MenuItem
+                                                            key={chart.key}
+                                                            value={chart.key}
+                                                        >
+                                                            {DIFFICULTY_NAMES[
+                                                                chart.difficulty
+                                                            ] ?? chart.key}
+                                                            {chart.level
+                                                                ? ` · Lv ${chart.level}`
+                                                                : ''}
+                                                        </MenuItem>
+                                                    ),
+                                                )}
+                                            </Select>
+                                        </FormControl>
+
+                                        {maidata &&
+                                            selectedChart &&
+                                            timeline && (
+                                                <Stack
+                                                    direction="row"
+                                                    sx={{
+                                                        gap: 1,
+                                                        flexWrap: 'wrap',
+                                                    }}
+                                                >
+                                                    <Chip
+                                                        label={maidata.title}
+                                                        color="primary"
+                                                    />
+                                                    <Chip
+                                                        label={`${timeline.events.length} 個時點`}
+                                                    />
+                                                    <Chip
+                                                        label={`${breakCount} 個 Break 時點`}
+                                                        color={
+                                                            breakCount
+                                                                ? 'secondary'
+                                                                : 'default'
+                                                        }
+                                                    />
+                                                    <Chip
+                                                        label={`First ${selectedChart.first.toFixed(3)}s`}
+                                                    />
+                                                </Stack>
+                                            )}
+
+                                        <Divider />
+                                        <Stack
+                                            direction={{
+                                                xs: 'column',
+                                                sm: 'row',
+                                            }}
+                                            spacing={3}
+                                            sx={{
+                                                alignItems: {
+                                                    xs: 'stretch',
+                                                    sm: 'center',
+                                                },
+                                            }}
+                                        >
+                                            <Box sx={{ flex: 1 }}>
+                                                <Stack
+                                                    direction="row"
+                                                    spacing={1}
+                                                    sx={{
+                                                        alignItems: 'center',
+                                                    }}
+                                                >
+                                                    <TuneRoundedIcon
+                                                        color="primary"
+                                                        fontSize="small"
+                                                    />
+                                                    <Typography
+                                                        sx={{ fontWeight: 750 }}
+                                                    >
+                                                        正解音音量
+                                                    </Typography>
+                                                    <Typography
+                                                        color="primary.main"
+                                                        sx={{ fontWeight: 750 }}
+                                                    >
+                                                        {Math.round(
+                                                            answerVolume * 100,
+                                                        )}
+                                                        %
+                                                    </Typography>
+                                                </Stack>
+                                                <Slider
+                                                    value={answerVolume}
+                                                    min={0.1}
+                                                    max={1.5}
+                                                    step={0.05}
+                                                    disabled={isProcessing}
+                                                    onChange={(_, value) =>
+                                                        setAnswerVolume(
+                                                            value as number,
+                                                        )
+                                                    }
+                                                    aria-label="正解音音量"
+                                                />
+                                            </Box>
+                                            <Tooltip title="同一判定時點只播放一次；同時含 Break 時使用 Break 音。">
+                                                <Chip
+                                                    label="同拍自動去重"
+                                                    variant="outlined"
+                                                />
+                                            </Tooltip>
+                                        </Stack>
+                                    </Stack>
+                                </CardContent>
+                            </Card>
+                        </Box>
+
+                        <Alert
+                            severity={
+                                error
+                                    ? 'error'
+                                    : outputs.length
+                                      ? 'success'
+                                      : 'info'
+                            }
+                            variant="outlined"
+                        >
+                            {error ?? status}
+                        </Alert>
+
+                        {isProcessing && (
+                            <Box>
+                                <Stack
+                                    direction="row"
+                                    sx={{
+                                        justifyContent: 'space-between',
+                                        mb: 1,
+                                    }}
+                                >
+                                    <Typography variant="body2">
+                                        {status}
+                                    </Typography>
+                                    <Typography variant="body2">
+                                        {Math.round(progress)}%
+                                    </Typography>
+                                </Stack>
+                                <LinearProgress
+                                    variant="determinate"
+                                    value={progress}
+                                />
+                            </Box>
+                        )}
+
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            size="large"
+                            disabled={isProcessing}
+                            onClick={() => void startProcess()}
+                            sx={{ py: 1.6, fontSize: '1rem' }}
+                        >
+                            {isProcessing ? '正在生成…' : '生成兩個 MP3'}
+                        </Button>
+
+                        {outputs.length > 0 && (
+                            <Stack spacing={2}>
+                                <Typography variant="h5" component="h2">
+                                    3. 試聽與下載
+                                </Typography>
+                                {outputs.map((output) => (
+                                    <ResultPlayer
+                                        key={output.url}
+                                        output={output}
+                                    />
+                                ))}
+                            </Stack>
+                        )}
+
+                        <Typography
+                            variant="caption"
+                            color="text.disabled"
+                            sx={{ textAlign: 'center' }}
+                        >
+                            音訊解碼、混音與 MP3 編碼皆在本機瀏覽器執行
+                        </Typography>
+                    </Stack>
+                </Container>
+            </Box>
+        </ThemeProvider>
     );
 }

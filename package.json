@@ -9,11 +9,17 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@breezystack/lamejs": "^1.2.7",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^9.4.0",
+    "@mui/material": "^9.4.0",
     "@svgr/webpack": "^8.1.0",
     "framer-motion": "^11.18.0",
     "next": "15.1.11",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "simai.js": "^1.2.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
