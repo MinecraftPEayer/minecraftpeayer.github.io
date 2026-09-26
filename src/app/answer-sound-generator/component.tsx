@@ -187,6 +187,22 @@ export default function MaimaiAudioTool() {
         );
     };
 
+    const updateEncodingProgress = (
+        start: number,
+        span: number,
+        message: string,
+    ) => {
+        let lastUpdate = -Infinity;
+        return (value: number) => {
+            const now = performance.now();
+            if (value < 1 && now - lastUpdate < 250) {
+                return Promise.resolve();
+            }
+            lastUpdate = now;
+            return updateProgress(start + value * span, message);
+        };
+    };
+
     const startProcess = async () => {
         if (
             !songFile ||
@@ -233,8 +249,9 @@ export default function MaimaiAudioTool() {
                 onProgress: (value) =>
                     updateProgress(14 + value * 10, '正在配置含 BGM 正解音…'),
             });
-            const withBgmBlob = await encodeMp3(withBgm, (value) =>
-                updateProgress(25 + value * 30, '正在編碼含 BGM 的 MP3…'),
+            const withBgmBlob = await encodeMp3(
+                withBgm,
+                updateEncodingProgress(25, 30, '正在編碼含 BGM 的 MP3…'),
             );
 
             await updateProgress(57, '正在渲染純正解音版本…');
@@ -249,8 +266,9 @@ export default function MaimaiAudioTool() {
                 onProgress: (value) =>
                     updateProgress(57 + value * 10, '正在配置純正解音…'),
             });
-            const withoutBgmBlob = await encodeMp3(withoutBgm, (value) =>
-                updateProgress(68 + value * 30, '正在編碼純正解音的 MP3…'),
+            const withoutBgmBlob = await encodeMp3(
+                withoutBgm,
+                updateEncodingProgress(68, 30, '正在編碼純正解音的 MP3…'),
             );
 
             const title = safeFilename(maidata.title);

@@ -1,5 +1,6 @@
-import { Mp3Encoder } from '@breezystack/lamejs';
+import { createEncoder } from 'wasm-media-encoders';
 import type { AnswerEvent } from './simai';
+import { buildBreakPlaybacks } from './break-audio';
 
 export interface RenderOptions {
     song: AudioBuffer;
@@ -66,6 +67,30 @@ export async function renderAnswerTrack({
     breakGain.gain.value = breakVolume;
     breakGain.connect(limiter);
 
+    // Cheer is embedded in the supplied Break sample, so replacing that sample
+    // also truncates its Cheer. CRI Stop(false) has an unknown release envelope;
+    // hard replacement is an approximation, not sample-identical to CRI Atom.
+    const breakPlaybacks = buildBreakPlaybacks(
+        events
+            .filter((event) => event.kind === 'break')
+            .map((event) => ({
+                time: event.time,
+                // The deterministic correct-answer track uses the top success result.
+                judgment: 'critical' as const,
+            })),
+        breakSound?.duration ?? 0,
+    );
+
+    if (breakSound) {
+        for (const playback of breakPlaybacks) {
+            if (playback.time < 0 || playback.time >= duration) continue;
+            const breakSource = context.createBufferSource();
+            breakSource.buffer = breakSound;
+            breakSource.connect(breakGain);
+            breakSource.start(playback.time, 0, playback.duration);
+        }
+    }
+
     const chunkSize = 250;
     for (let index = 0; index < events.length; index += chunkSize) {
         const chunk = events.slice(index, index + chunkSize);
@@ -75,13 +100,6 @@ export async function renderAnswerTrack({
             answerSource.buffer = normalSound;
             answerSource.connect(answerGain);
             answerSource.start(event.time);
-
-            if (event.kind === 'break' && breakSound) {
-                const breakSource = context.createBufferSource();
-                breakSource.buffer = breakSound;
-                breakSource.connect(breakGain);
-                breakSource.start(event.time);
-            }
         }
         await onProgress?.(Math.min(1, (index + chunk.length) / events.length));
         await yieldToBrowser();
@@ -90,24 +108,34 @@ export async function renderAnswerTrack({
     return context.startRendering();
 }
 
-const floatToPcm16 = (input: Float32Array, start: number, end: number) => {
-    const output = new Int16Array(end - start);
-    for (
-        let sourceIndex = start, outputIndex = 0;
-        sourceIndex < end;
-        sourceIndex++, outputIndex++
-    ) {
-        const sample = Math.max(-1, Math.min(1, input[sourceIndex]));
-        output[outputIndex] = sample < 0 ? sample * 32768 : sample * 32767;
+const MP3_WASM_URL = '/answer-sound-generator/mp3-encoder-0.7.0.wasm';
+
+const clipPcmForMp3 = (input: Float32Array, start: number, end: number) => {
+    const samples = input.subarray(start, end);
+    let clipped: Float32Array | undefined;
+    for (let index = 0; index < samples.length; index++) {
+        const sample = samples[index];
+        if (!Number.isFinite(sample) || sample < -1 || sample > 1) {
+            clipped ??= new Float32Array(samples);
+            clipped[index] = Number.isNaN(sample)
+                ? 0
+                : Math.max(-1, Math.min(1, sample));
+        }
     }
-    return output;
+    return clipped ?? samples;
 };
 
 export async function encodeMp3(
     buffer: AudioBuffer,
     onProgress?: (progress: number) => Promise<void>,
 ) {
-    const encoder = new Mp3Encoder(2, buffer.sampleRate, 192);
+    // Keep the pinned MP3 WASM asset outside the JavaScript bundle.
+    const encoder = await createEncoder('audio/mpeg', MP3_WASM_URL);
+    encoder.configure({
+        sampleRate: buffer.sampleRate,
+        channels: 2,
+        bitrate: 192,
+    });
     const chunks: ArrayBuffer[] = [];
     const left = buffer.getChannelData(0);
     const right = buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : left;
@@ -115,18 +143,19 @@ export async function encodeMp3(
 
     for (let start = 0; start < buffer.length; start += blockSize) {
         const end = Math.min(start + blockSize, buffer.length);
-        const encoded = encoder.encodeBuffer(
-            floatToPcm16(left, start, end),
-            floatToPcm16(right, start, end),
-        );
+        const encoded = encoder.encode([
+            clipPcmForMp3(left, start, end),
+            clipPcmForMp3(right, start, end),
+        ]);
         if (encoded.length > 0) {
+            // The encoder reuses its WASM output memory on the next call.
             chunks.push(encoded.slice().buffer as ArrayBuffer);
         }
         await onProgress?.(end / buffer.length);
         await yieldToBrowser();
     }
 
-    const finalChunk = encoder.flush();
+    const finalChunk = encoder.finalize();
     if (finalChunk.length > 0) {
         chunks.push(finalChunk.slice().buffer as ArrayBuffer);
     }
