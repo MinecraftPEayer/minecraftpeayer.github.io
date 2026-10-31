@@ -60,6 +60,7 @@ interface FilePickerProps {
     accept: string;
     icon?: SvgIconComponent;
     optional?: boolean;
+    disabled?: boolean;
     onChange: (file: File | null) => void;
 }
 
@@ -71,6 +72,7 @@ export function FilePicker({
     accept,
     icon: Icon = AudiotrackRoundedIcon,
     optional,
+    disabled,
     onChange,
 }: FilePickerProps) {
     return (
@@ -122,6 +124,7 @@ export function FilePicker({
                     component="label"
                     htmlFor={id}
                     fullWidth
+                    disabled={disabled}
                     variant={file ? 'outlined' : 'contained'}
                     color={file ? 'primary' : 'inherit'}
                     startIcon={
@@ -140,12 +143,24 @@ export function FilePicker({
                         id={id}
                         hidden
                         type="file"
+                        disabled={disabled}
                         accept={accept}
                         onChange={(event) => {
                             onChange(event.target.files?.[0] ?? null);
+                            event.target.value = '';
                         }}
                     />
                 </Button>
+                {optional && file && (
+                    <Button
+                        size="small"
+                        disabled={disabled}
+                        onClick={() => onChange(null)}
+                        sx={{ mt: 1 }}
+                    >
+                        移除檔案
+                    </Button>
+                )}
             </CardContent>
         </Card>
     );

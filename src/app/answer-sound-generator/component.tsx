@@ -31,7 +31,18 @@ import MusicNoteRoundedIcon from '@mui/icons-material/MusicNoteRounded';
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { decodeAudioFile, encodeMp3, renderAnswerTrack } from './audio';
-import { buildAnswerTimeline, parseMaidata, type Maidata } from './simai';
+import {
+    buildAnswerTimeline,
+    parseMaidata,
+    parseSingleSimaiChart,
+    type Maidata,
+} from './simai';
+import {
+    loadMaiNotesChart,
+    type MaiNotesSong,
+    type MaiNotesChart,
+} from './mai-notes';
+import { MaiNotesSearch } from './mai-notes-search';
 import { FilePicker, ResultPlayer, toolTheme, type OutputFile } from './ui';
 
 const DIFFICULTY_NAMES: Record<number, string> = {
@@ -87,6 +98,9 @@ export default function MaimaiAudioTool() {
     const [progress, setProgress] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
     const [outputs, setOutputs] = useState<OutputFile[]>([]);
+    const [chartSource, setChartSource] = useState<string | null>(null);
+    const [isChartLoading, setIsChartLoading] = useState(false);
+    const chartRequestId = useRef(0);
     const outputUrls = useRef<string[]>([]);
 
     const selectedChart = maidata?.charts.find(
@@ -101,7 +115,6 @@ export default function MaimaiAudioTool() {
     );
     const breakCount =
         timeline?.events.filter((event) => event.kind === 'break').length ?? 0;
-
     const clearOutputs = useCallback(() => {
         outputUrls.current.forEach((url) => URL.revokeObjectURL(url));
         outputUrls.current = [];
@@ -110,41 +123,58 @@ export default function MaimaiAudioTool() {
 
     useEffect(() => clearOutputs, [clearOutputs]);
 
-    const parseMaidataSource = useCallback((source: string, file?: File) => {
-        setError(null);
-        try {
-            const parsed = parseMaidata(source);
-            const preferred =
-                parsed.charts.find((chart) => chart.difficulty === 5) ??
-                parsed.charts.at(-1);
-            if (file) setMaidataFile(file);
-            setMaidata(parsed);
-            setDifficulty(preferred?.key ?? '');
-            setShowPaste(false);
-            setStatus(
-                `已讀取「${parsed.title}」的 ${parsed.charts.length} 個難度。`,
-            );
-        } catch (caught) {
-            setMaidata(null);
-            setDifficulty('');
-            setError(
-                caught instanceof Error
-                    ? `Simai 解析失敗：${caught.message}`
-                    : 'Simai 解析失敗，請確認 maidata.txt 格式。',
-            );
-        }
-    }, []);
-
-    const loadMaidata = useCallback(
-        async (file: File) => {
+    const parseMaidataSource = useCallback(
+        (source: string, origin: string, file?: File) => {
+            chartRequestId.current += 1;
+            setIsChartLoading(false);
             setError(null);
-            setMaidataFile(file);
+            clearOutputs();
+            setMaidataFile(file ?? null);
             try {
-                const source = await file.text();
-                parseMaidataSource(source, file);
+                const parsed = parseMaidata(source);
+                const preferred =
+                    parsed.charts.find((chart) => chart.difficulty === 5) ??
+                    parsed.charts.at(-1);
+                setMaidata(parsed);
+                setDifficulty(preferred?.key ?? '');
+                setChartSource(origin);
+                setShowPaste(false);
+                setStatus(
+                    `已讀取「${parsed.title}」的 ${parsed.charts.length} 個難度。`,
+                );
+                return true;
             } catch (caught) {
                 setMaidata(null);
                 setDifficulty('');
+                setChartSource(null);
+                setError(
+                    caught instanceof Error
+                        ? `Simai 解析失敗：${caught.message}`
+                        : 'Simai 解析失敗，請確認 maidata.txt 格式。',
+                );
+                return false;
+            }
+        },
+        [clearOutputs],
+    );
+
+    const loadMaidata = useCallback(
+        async (file: File, origin = '上傳 maidata.txt') => {
+            const requestId = ++chartRequestId.current;
+            setError(null);
+            clearOutputs();
+            setMaidata(null);
+            setDifficulty('');
+            setChartSource(null);
+            setMaidataFile(file);
+            setMaidataText('');
+            setIsChartLoading(false);
+            try {
+                const source = await file.text();
+                if (requestId !== chartRequestId.current) return false;
+                return parseMaidataSource(source, origin, file);
+            } catch (caught) {
+                if (requestId !== chartRequestId.current) return false;
                 setShowPaste(true);
                 const reason =
                     caught instanceof DOMException &&
@@ -154,9 +184,10 @@ export default function MaimaiAudioTool() {
                           ? caught.message
                           : '瀏覽器無法讀取 maidata.txt。';
                 setError(`讀檔失敗：${reason}`);
+                return false;
             }
         },
-        [parseMaidataSource],
+        [clearOutputs, parseMaidataSource],
     );
 
     const handleFolderSelect = async (files: FileList | null) => {
@@ -164,18 +195,60 @@ export default function MaimaiAudioTool() {
         setError(null);
         const found = findSongFolderFiles(Array.from(files));
         if (found.song) setSongFile(found.song);
-        if (found.maidata) await loadMaidata(found.maidata);
-
-        if (found.song && found.maidata) {
-            setStatus(`已從同一資料夾載入 ${found.song.name} 與 maidata.txt。`);
-        } else if (!found.song && !found.maidata) {
-            setError('資料夾中找不到 maidata.txt 或可支援的 track 音檔。');
+        if (found.maidata) {
+            const loaded = await loadMaidata(found.maidata, '歌曲資料夾');
+            if (loaded) {
+                setStatus(
+                    found.song
+                        ? `已從資料夾載入 maidata.txt 與 ${found.song.name}。`
+                        : '已從資料夾載入 maidata.txt；歌曲音檔可選填。',
+                );
+            }
         } else {
             setError(
                 found.song
                     ? '已找到 track 音檔，請再選擇 maidata.txt。'
-                    : '已找到 maidata.txt，請再選擇 track.mp3／wav／ogg／m4a。',
+                    : '資料夾中找不到 maidata.txt。',
             );
+        }
+    };
+
+    const selectMaiChart = async (song: MaiNotesSong, chart: MaiNotesChart) => {
+        const requestId = ++chartRequestId.current;
+        setError(null);
+        clearOutputs();
+        setMaidata(null);
+        setMaidataFile(null);
+        setMaidataText('');
+        setShowPaste(false);
+        setDifficulty('');
+        setChartSource(null);
+        setIsChartLoading(true);
+        try {
+            const source = await loadMaiNotesChart(chart.id);
+            if (requestId !== chartRequestId.current) return;
+            const parsed = parseSingleSimaiChart(source, {
+                title: song.title,
+                artist: song.artist,
+                difficulty: chart.difficulty,
+                level: chart.level,
+            });
+            if (requestId !== chartRequestId.current) return;
+            setMaidata(parsed);
+            setDifficulty(parsed.charts[0].key);
+            setChartSource(`mai-notes · ${song.title} · ${chart.difficulty}`);
+            setStatus(
+                `已載入 mai-notes「${song.title}」${chart.difficulty} 譜面。`,
+            );
+        } catch (caught) {
+            if (requestId !== chartRequestId.current) return;
+            setError(
+                caught instanceof Error
+                    ? `mai-notes 譜面載入失敗：${caught.message}`
+                    : 'mai-notes 譜面載入失敗。',
+            );
+        } finally {
+            if (requestId === chartRequestId.current) setIsChartLoading(false);
         }
     };
 
@@ -204,14 +277,12 @@ export default function MaimaiAudioTool() {
     };
 
     const startProcess = async () => {
-        if (
-            !songFile ||
-            !normalSoundFile ||
-            !maidata ||
-            !selectedChart ||
-            !timeline
-        ) {
-            setError('請先加入歌曲、maidata.txt、一般正解音，並選擇難度。');
+        if (!maidata || !selectedChart || !timeline) {
+            setError('請先載入有效的譜面，並選擇難度。');
+            return;
+        }
+        if (!normalSoundFile) {
+            setError('請先加入一般正解音檔案。');
             return;
         }
         if (timeline.events.length === 0) {
@@ -225,36 +296,55 @@ export default function MaimaiAudioTool() {
         setProgress(1);
 
         try {
-            await updateProgress(5, '正在解碼歌曲與正解音…');
+            await updateProgress(5, '正在解碼已提供的音檔…');
             const [song, normalSound, breakSound] = await Promise.all([
-                decodeAudioFile(songFile),
+                songFile
+                    ? decodeAudioFile(songFile)
+                    : Promise.resolve(undefined),
                 decodeAudioFile(normalSoundFile),
                 breakSoundFile
                     ? decodeAudioFile(breakSoundFile)
                     : Promise.resolve(undefined),
             ]);
+            const title = safeFilename(maidata.title);
+            const diffName =
+                DIFFICULTY_NAMES[selectedChart.difficulty] ?? selectedChart.key;
+            const completed: (Omit<OutputFile, 'url'> & { blob: Blob })[] = [];
 
-            await updateProgress(
-                14,
-                `已建立 ${timeline.events.length} 個判定時點，準備含 BGM 版本…`,
-            );
-            const withBgm = await renderAnswerTrack({
-                song,
-                normalSound,
-                breakSound,
-                events: timeline.events,
-                includeBgm: true,
-                answerVolume,
-                breakVolume,
-                onProgress: (value) =>
-                    updateProgress(14 + value * 10, '正在配置含 BGM 正解音…'),
-            });
-            const withBgmBlob = await encodeMp3(
-                withBgm,
-                updateEncodingProgress(25, 30, '正在編碼含 BGM 的 MP3…'),
-            );
+            if (song) {
+                await updateProgress(
+                    14,
+                    `已建立 ${timeline.events.length} 個判定時點，準備含 BGM 版本…`,
+                );
+                const withBgm = await renderAnswerTrack({
+                    song,
+                    normalSound,
+                    breakSound,
+                    events: timeline.events,
+                    includeBgm: true,
+                    answerVolume,
+                    breakVolume,
+                    onProgress: (value) =>
+                        updateProgress(
+                            14 + value * 10,
+                            '正在配置含 BGM 正解音…',
+                        ),
+                });
+                const blob = await encodeMp3(
+                    withBgm,
+                    updateEncodingProgress(25, 30, '正在編碼含 BGM 的 MP3…'),
+                );
+                completed.push({
+                    blob,
+                    filename: `${title}_${diffName}_with_BGM.mp3`,
+                    title: '含背景音樂',
+                    duration: withBgm.duration,
+                });
+            }
 
-            await updateProgress(57, '正在渲染純正解音版本…');
+            const renderStart = song ? 57 : 15;
+            const encodeStart = song ? 68 : 30;
+            await updateProgress(renderStart, '正在渲染純正解音版本…');
             const withoutBgm = await renderAnswerTrack({
                 song,
                 normalSound,
@@ -264,34 +354,37 @@ export default function MaimaiAudioTool() {
                 answerVolume,
                 breakVolume,
                 onProgress: (value) =>
-                    updateProgress(57 + value * 10, '正在配置純正解音…'),
+                    updateProgress(
+                        renderStart + value * 10,
+                        '正在配置純正解音…',
+                    ),
             });
-            const withoutBgmBlob = await encodeMp3(
+            const blob = await encodeMp3(
                 withoutBgm,
-                updateEncodingProgress(68, 30, '正在編碼純正解音的 MP3…'),
+                updateEncodingProgress(
+                    encodeStart,
+                    98 - encodeStart,
+                    '正在編碼純正解音的 MP3…',
+                ),
             );
-
-            const title = safeFilename(maidata.title);
-            const diffName =
-                DIFFICULTY_NAMES[selectedChart.difficulty] ?? selectedChart.key;
-            const withBgmUrl = URL.createObjectURL(withBgmBlob);
-            const withoutBgmUrl = URL.createObjectURL(withoutBgmBlob);
-            outputUrls.current = [withBgmUrl, withoutBgmUrl];
-            setOutputs([
-                {
-                    url: withBgmUrl,
-                    filename: `${title}_${diffName}_with_BGM.mp3`,
-                    title: '含背景音樂',
-                    duration: withBgm.duration,
-                },
-                {
-                    url: withoutBgmUrl,
-                    filename: `${title}_${diffName}_answer_only.mp3`,
-                    title: '純正解音',
-                    duration: withoutBgm.duration,
-                },
-            ]);
-            await updateProgress(100, '兩個 MP3 都已完成，可試聽或下載。');
+            completed.push({
+                blob,
+                filename: `${title}_${diffName}_answer_only.mp3`,
+                title: '純正解音',
+                duration: withoutBgm.duration,
+            });
+            const resultFiles = completed.map(({ blob, ...output }) => ({
+                ...output,
+                url: URL.createObjectURL(blob),
+            }));
+            outputUrls.current = resultFiles.map((output) => output.url);
+            setOutputs(resultFiles);
+            await updateProgress(
+                100,
+                song
+                    ? '兩個 MP3 都已完成，可試聽或下載。'
+                    : '純正解音 MP3 已完成，可試聽或下載。',
+            );
         } catch (caught) {
             console.error(caught);
             setError(
@@ -345,7 +438,8 @@ export default function MaimaiAudioTool() {
                                 </Box>
                             </Typography>
                             <Typography color="text.secondary" sx={{ mt: 1.5 }}>
-                                讀取 maidata.txt，在正確時點混入音效並輸出 MP3。
+                                讀取本機或 mai-notes
+                                譜面，在正確時點混入音效並輸出 MP3。
                                 檔案不會上傳。
                             </Typography>
                         </Box>
@@ -377,8 +471,8 @@ export default function MaimaiAudioTool() {
                                         variant="body2"
                                         color="text.secondary"
                                     >
-                                        優先配對同一層的 maidata.txt 與
-                                        track.mp3／wav／ogg／m4a。
+                                        載入 maidata.txt；若有同一層的
+                                        track.mp3／wav／ogg／m4a，也會自動加入。
                                     </Typography>
                                 </Box>
                                 <Button
@@ -386,11 +480,13 @@ export default function MaimaiAudioTool() {
                                     variant="contained"
                                     startIcon={<FolderOpenRoundedIcon />}
                                     size="large"
+                                    disabled={isProcessing}
                                 >
                                     選擇資料夾
                                     <input
                                         hidden
                                         type="file"
+                                        disabled={isProcessing}
                                         {...folderInputProps}
                                         onChange={(event) => {
                                             void handleFolderSelect(
@@ -422,11 +518,13 @@ export default function MaimaiAudioTool() {
                             >
                                 <FilePicker
                                     id="song-file"
-                                    label="歌曲音檔"
+                                    label="歌曲音檔（BGM）"
                                     hint="track.mp3、WAV、OGG 或 M4A"
                                     file={songFile}
                                     accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac"
                                     icon={MusicNoteRoundedIcon}
+                                    optional
+                                    disabled={isProcessing}
                                     onChange={setSongFile}
                                 />
                                 <FilePicker
@@ -436,6 +534,7 @@ export default function MaimaiAudioTool() {
                                     file={maidataFile}
                                     accept=".txt,text/plain"
                                     icon={InsertDriveFileRoundedIcon}
+                                    disabled={isProcessing}
                                     onChange={(file) => {
                                         if (file) void loadMaidata(file);
                                     }}
@@ -447,6 +546,7 @@ export default function MaimaiAudioTool() {
                                     file={normalSoundFile}
                                     accept="audio/*"
                                     icon={AudiotrackRoundedIcon}
+                                    disabled={isProcessing}
                                     onChange={setNormalSoundFile}
                                 />
                                 <FilePicker
@@ -457,9 +557,18 @@ export default function MaimaiAudioTool() {
                                     accept="audio/*"
                                     icon={BoltRoundedIcon}
                                     optional
+                                    disabled={isProcessing}
                                     onChange={setBreakSoundFile}
                                 />
                             </Box>
+                            <MaiNotesSearch
+                                key={chartSource ?? 'no-chart'}
+                                disabled={isProcessing}
+                                chartLoading={isChartLoading}
+                                onSelect={(song, chart) =>
+                                    void selectMaiChart(song, chart)
+                                }
+                            />
                             {showPaste && (
                                 <Paper
                                     variant="outlined"
@@ -496,7 +605,10 @@ export default function MaimaiAudioTool() {
                                             variant="outlined"
                                             disabled={!maidataText.trim()}
                                             onClick={() =>
-                                                parseMaidataSource(maidataText)
+                                                parseMaidataSource(
+                                                    maidataText,
+                                                    '貼上 maidata.txt',
+                                                )
                                             }
                                         >
                                             解析貼上的內容
@@ -519,7 +631,13 @@ export default function MaimaiAudioTool() {
                                     <Stack spacing={3}>
                                         <FormControl
                                             fullWidth
-                                            disabled={!maidata}
+                                            disabled={
+                                                !maidata ||
+                                                isProcessing ||
+                                                chartSource?.startsWith(
+                                                    'mai-notes',
+                                                )
+                                            }
                                         >
                                             <InputLabel id="difficulty-label">
                                                 難度
@@ -536,7 +654,7 @@ export default function MaimaiAudioTool() {
                                             >
                                                 {!maidata && (
                                                     <MenuItem value="">
-                                                        請先讀取 maidata.txt
+                                                        請先載入譜面
                                                     </MenuItem>
                                                 )}
                                                 {maidata?.charts.map(
@@ -567,6 +685,13 @@ export default function MaimaiAudioTool() {
                                                         flexWrap: 'wrap',
                                                     }}
                                                 >
+                                                    <Chip
+                                                        label={
+                                                            chartSource ??
+                                                            '本機譜面'
+                                                        }
+                                                        variant="outlined"
+                                                    />
                                                     <Chip
                                                         label={maidata.title}
                                                         color="primary"
@@ -740,11 +865,15 @@ export default function MaimaiAudioTool() {
                             variant="contained"
                             color="primary"
                             size="large"
-                            disabled={isProcessing}
+                            disabled={isProcessing || isChartLoading}
                             onClick={() => void startProcess()}
                             sx={{ py: 1.6, fontSize: '1rem' }}
                         >
-                            {isProcessing ? '正在生成…' : '生成兩個 MP3'}
+                            {isProcessing
+                                ? '正在生成…'
+                                : songFile
+                                  ? '生成兩個 MP3'
+                                  : '生成純正解音 MP3'}
                         </Button>
 
                         {outputs.length > 0 && (

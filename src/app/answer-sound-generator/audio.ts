@@ -3,7 +3,7 @@ import type { AnswerEvent } from './simai';
 import { buildBreakPlaybacks } from './break-audio';
 
 export interface RenderOptions {
-    song: AudioBuffer;
+    song?: AudioBuffer;
     normalSound: AudioBuffer;
     breakSound?: AudioBuffer;
     events: AnswerEvent[];
@@ -35,13 +35,41 @@ export async function renderAnswerTrack({
     breakVolume,
     onProgress,
 }: RenderOptions) {
-    const sampleRate = song.sampleRate;
-    const longestSound = Math.max(
-        normalSound.duration,
+    if (includeBgm && !song) {
+        throw new Error('含背景音樂的輸出需要歌曲音檔。');
+    }
+    const sampleRate = song?.sampleRate ?? normalSound.sampleRate;
+    const breakPlaybacks = buildBreakPlaybacks(
+        events
+            .filter((event) => event.kind === 'break')
+            .map((event) => ({
+                time: event.time,
+                // The deterministic correct-answer track uses the top success result.
+                judgment: 'critical' as const,
+            })),
         breakSound?.duration ?? 0,
     );
-    const lastEvent = events.at(-1)?.time ?? 0;
-    const duration = Math.max(song.duration, lastEvent + longestSound);
+    const answerEnd = events.reduce(
+        (end, event) =>
+            event.time >= 0
+                ? Math.max(end, event.time + normalSound.duration)
+                : end,
+        0,
+    );
+    const breakEnd = breakSound
+        ? breakPlaybacks.reduce(
+              (end, playback) =>
+                  playback.time >= 0
+                      ? Math.max(end, playback.time + playback.duration)
+                      : end,
+              0,
+          )
+        : 0;
+    const duration = Math.max(
+        includeBgm ? (song?.duration ?? 0) : 0,
+        answerEnd,
+        breakEnd,
+    );
     const frameCount = Math.max(1, Math.ceil(duration * sampleRate));
     const context = new OfflineAudioContext(2, frameCount, sampleRate);
     const limiter = context.createDynamicsCompressor();
@@ -52,7 +80,7 @@ export async function renderAnswerTrack({
     limiter.release.value = 0.12;
     limiter.connect(context.destination);
 
-    if (includeBgm) {
+    if (includeBgm && song) {
         const songSource = context.createBufferSource();
         songSource.buffer = song;
         songSource.connect(limiter);
@@ -70,17 +98,6 @@ export async function renderAnswerTrack({
     // Cheer is embedded in the supplied Break sample, so replacing that sample
     // also truncates its Cheer. CRI Stop(false) has an unknown release envelope;
     // hard replacement is an approximation, not sample-identical to CRI Atom.
-    const breakPlaybacks = buildBreakPlaybacks(
-        events
-            .filter((event) => event.kind === 'break')
-            .map((event) => ({
-                time: event.time,
-                // The deterministic correct-answer track uses the top success result.
-                judgment: 'critical' as const,
-            })),
-        breakSound?.duration ?? 0,
-    );
-
     if (breakSound) {
         for (const playback of breakPlaybacks) {
             if (playback.time < 0 || playback.time >= duration) continue;

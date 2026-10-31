@@ -76,6 +76,46 @@ export function parseMaidata(source: string): Maidata {
     };
 }
 
+/** A mai-notes player page contains one selected chart, not maidata fields. */
+export function parseSingleSimaiChart(
+    source: string,
+    details: {
+        title: string;
+        artist?: string;
+        difficulty: string;
+        level?: string;
+    },
+): Maidata {
+    const chartText = source.replace(/^\uFEFF/, '').trim();
+    if (!chartText) throw new Error('譜面內容是空的。');
+    const chart: SimaiChart = {
+        key: details.difficulty,
+        difficulty:
+            {
+                BASIC: 2,
+                ADVANCED: 3,
+                EXPERT: 4,
+                MASTER: 5,
+                'Re:MASTER': 6,
+            }[details.difficulty] ?? 0,
+        level: details.level,
+        first: 0,
+        parsed: (() => {
+            try {
+                return SimaiConvert.deserialize(chartText);
+            } catch (caught) {
+                throw new Error(
+                    `Simai 解析失敗：${caught instanceof Error && caught.message ? caught.message : '譜面格式不正確。'}`,
+                );
+            }
+        })(),
+    };
+    if (buildAnswerTimeline(chart).events.length === 0) {
+        throw new Error('Simai 解析失敗：譜面沒有可用的判定時點。');
+    }
+    return { title: details.title, artist: details.artist, charts: [chart] };
+}
+
 const isAudibleHead = (note: Note) => note.type !== NoteType.ForceInvalidate;
 const isBreak = (note: Note) => note.type === NoteType.Break;
 
