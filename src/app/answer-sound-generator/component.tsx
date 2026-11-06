@@ -4,17 +4,12 @@ import {
     Alert,
     Box,
     Button,
-    Card,
-    CardContent,
-    Chip,
     Container,
     CssBaseline,
-    Divider,
     FormControl,
     InputLabel,
     LinearProgress,
     MenuItem,
-    Paper,
     Select,
     Slider,
     Stack,
@@ -23,12 +18,6 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import AudiotrackRoundedIcon from '@mui/icons-material/AudiotrackRounded';
-import BoltRoundedIcon from '@mui/icons-material/BoltRounded';
-import FolderOpenRoundedIcon from '@mui/icons-material/FolderOpenRounded';
-import InsertDriveFileRoundedIcon from '@mui/icons-material/InsertDriveFileRounded';
-import MusicNoteRoundedIcon from '@mui/icons-material/MusicNoteRounded';
-import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { decodeAudioFile, encodeMp3, renderAnswerTrack } from './audio';
 import {
@@ -43,7 +32,28 @@ import {
     type MaiNotesChart,
 } from './mai-notes';
 import { MaiNotesSearch } from './mai-notes-search';
-import { FilePicker, ResultPlayer, toolTheme, type OutputFile } from './ui';
+import {
+    FilePicker,
+    Panel,
+    ResultPlayer,
+    monoSx,
+    toolTheme,
+    type OutputFile,
+} from './ui';
+import { tool } from '../_tool-ui/tokens';
+import {
+    IconBolt,
+    IconFile,
+    IconFolder,
+    IconMusic,
+    IconWave,
+} from '../_tool-ui/icons';
+import {
+    Pipeline,
+    ToolIntro,
+    surfaceClass,
+    type Stage,
+} from '../_tool-ui/tool-chrome';
 
 const DIFFICULTY_NAMES: Record<number, string> = {
     1: 'EASY',
@@ -403,73 +413,114 @@ export default function MaimaiAudioTool() {
         directory: '',
     } as React.InputHTMLAttributes<HTMLInputElement>;
 
+    const sourcesReady = Boolean(maidata && normalSoundFile);
+    const chartReady = Boolean(selectedChart && timeline);
+    const diffLabel = selectedChart
+        ? `${DIFFICULTY_NAMES[selectedChart.difficulty] ?? selectedChart.key}${selectedChart.level ? ` ${selectedChart.level}` : ''}`
+        : undefined;
+    const stages: Stage[] = [
+        {
+            label: '來源',
+            state: isChartLoading
+                ? 'busy'
+                : sourcesReady
+                  ? 'done'
+                  : error && !isProcessing && !outputs.length && !sourcesReady
+                    ? 'error'
+                    : 'active',
+            value: isChartLoading
+                ? '載入譜面'
+                : sourcesReady
+                  ? songFile
+                      ? '譜面 + BGM'
+                      : '譜面 + 音效'
+                  : !maidata
+                    ? '缺譜面'
+                    : '缺正解音',
+        },
+        {
+            label: '設定',
+            state: chartReady ? 'done' : 'pending',
+            value: diffLabel,
+        },
+        {
+            label: '生成',
+            state: isProcessing
+                ? 'busy'
+                : outputs.length
+                  ? 'done'
+                  : error && sourcesReady
+                    ? 'error'
+                    : sourcesReady && chartReady
+                      ? 'active'
+                      : 'pending',
+            value: isProcessing
+                ? `${Math.round(progress)}%`
+                : outputs.length
+                  ? `${outputs.length} 個 MP3`
+                  : sourcesReady && chartReady
+                    ? '待生成'
+                    : undefined,
+        },
+        {
+            label: '下載',
+            state: outputs.length ? 'active' : 'pending',
+            value: outputs.length ? '可試聽' : undefined,
+        },
+    ];
+
+    const stats = maidata && selectedChart && timeline
+        ? [
+              { label: '來源', value: chartSource ?? '本機譜面', mono: false },
+              { label: '曲名', value: maidata.title, mono: false },
+              { label: '判定時點', value: `${timeline.events.length}`, mono: true },
+              {
+                  label: 'Break 時點',
+                  value: `${breakCount}`,
+                  mono: true,
+                  tone: breakCount ? tool.amber : undefined,
+              },
+              { label: 'First', value: `${selectedChart.first.toFixed(3)}s`, mono: true },
+          ]
+        : [];
+
+    const severity = error ? 'error' : outputs.length ? 'success' : 'info';
+
     return (
         <ThemeProvider theme={toolTheme}>
             <CssBaseline />
-            <Box
-                component="main"
-                sx={{
-                    minHeight: '100vh',
-                    py: { xs: 4, md: 8 },
-                    background:
-                        'radial-gradient(circle at 12% 5%, rgba(42,143,147,.24), transparent 32rem), radial-gradient(circle at 88% 14%, rgba(255,151,80,.13), transparent 28rem), #07111d',
-                }}
-            >
-                <Container maxWidth="md">
-                    <Stack spacing={4}>
-                        <Box sx={{ textAlign: 'center' }}>
-                            <Chip
-                                icon={<BoltRoundedIcon />}
-                                label="100% 在瀏覽器內完成"
-                                color="primary"
-                                variant="outlined"
-                                sx={{ mb: 2 }}
-                            />
-                            <Typography
-                                component="h1"
-                                variant="h1"
-                                sx={{
-                                    fontSize: { xs: '2.4rem', md: '3.7rem' },
-                                }}
-                            >
-                                Simai 正解音
-                                <Box component="span" color="primary.main">
-                                    生成器
-                                </Box>
-                            </Typography>
-                            <Typography color="text.secondary" sx={{ mt: 1.5 }}>
-                                讀取本機或 mai-notes
-                                譜面，在正確時點混入音效並輸出 MP3。
-                                檔案不會上傳。
-                            </Typography>
-                        </Box>
+            <Box component="main" className={surfaceClass}>
+                <Container maxWidth="md" sx={{ px: { xs: 2, sm: 3 }, pb: 4 }}>
+                    <ToolIntro title="Simai 正解音生成器">
+                        讀取本機或 mai-notes 譜面，在正確時點混入音效並輸出
+                        MP3。檔案不會上傳。
+                    </ToolIntro>
 
-                        <Paper
-                            variant="outlined"
-                            sx={{
-                                p: { xs: 2.5, sm: 3 },
-                                borderStyle: 'dashed',
-                                borderColor: 'rgba(120,231,212,.38)',
-                                bgcolor: 'rgba(120,231,212,.055)',
-                            }}
+                    <Pipeline label="生成進度" stages={stages} />
+
+                    <Stack spacing={2}>
+                        <Panel
+                            id="sources-title"
+                            title="準備來源"
+                            meta={`${[songFile, maidataFile ?? (maidata ? 1 : null), normalSoundFile, breakSoundFile].filter(Boolean).length} / 4`}
                         >
                             <Stack
                                 direction={{ xs: 'column', sm: 'row' }}
-                                spacing={2}
                                 sx={{
+                                    gap: 1.5,
                                     alignItems: { xs: 'stretch', sm: 'center' },
+                                    px: 2,
+                                    py: 2,
+                                    bgcolor: tool.accentSoft,
+                                    borderBottom: `1px solid ${tool.seam}`,
                                 }}
                             >
                                 <Box sx={{ flex: 1 }}>
-                                    <Typography
-                                        variant="h6"
-                                        sx={{ fontWeight: 800 }}
-                                    >
+                                    <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
                                         快速匯入歌曲資料夾
                                     </Typography>
                                     <Typography
-                                        variant="body2"
-                                        color="text.secondary"
+                                        sx={{ fontSize: 13, color: tool.textMuted, mt: 0.25, lineHeight: 1.6 }}
                                     >
                                         載入 maidata.txt；若有同一層的
                                         track.mp3／wav／ogg／m4a，也會自動加入。
@@ -478,9 +529,9 @@ export default function MaimaiAudioTool() {
                                 <Button
                                     component="label"
                                     variant="contained"
-                                    startIcon={<FolderOpenRoundedIcon />}
-                                    size="large"
+                                    startIcon={<IconFolder size={17} />}
                                     disabled={isProcessing}
+                                    sx={{ flex: '0 0 auto' }}
                                 >
                                     選擇資料夾
                                     <input
@@ -496,71 +547,52 @@ export default function MaimaiAudioTool() {
                                     />
                                 </Button>
                             </Stack>
-                        </Paper>
 
-                        <Box>
-                            <Typography
-                                variant="h5"
-                                component="h2"
-                                sx={{ mb: 2 }}
-                            >
-                                1. 準備來源
-                            </Typography>
-                            <Box
-                                sx={{
-                                    display: 'grid',
-                                    gridTemplateColumns: {
-                                        xs: '1fr',
-                                        sm: '1fr 1fr',
-                                    },
-                                    gap: 2,
+                            <FilePicker
+                                id="maidata-file"
+                                label="Simai 譜面"
+                                hint="maidata.txt"
+                                file={maidataFile}
+                                accept=".txt,text/plain"
+                                icon={IconFile}
+                                disabled={isProcessing}
+                                onChange={(file) => {
+                                    if (file) void loadMaidata(file);
                                 }}
-                            >
-                                <FilePicker
-                                    id="song-file"
-                                    label="歌曲音檔（BGM）"
-                                    hint="track.mp3、WAV、OGG 或 M4A"
-                                    file={songFile}
-                                    accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac"
-                                    icon={MusicNoteRoundedIcon}
-                                    optional
-                                    disabled={isProcessing}
-                                    onChange={setSongFile}
-                                />
-                                <FilePicker
-                                    id="maidata-file"
-                                    label="Simai 譜面"
-                                    hint="maidata.txt"
-                                    file={maidataFile}
-                                    accept=".txt,text/plain"
-                                    icon={InsertDriveFileRoundedIcon}
-                                    disabled={isProcessing}
-                                    onChange={(file) => {
-                                        if (file) void loadMaidata(file);
-                                    }}
-                                />
-                                <FilePicker
-                                    id="normal-answer-file"
-                                    label="一般正解音"
-                                    hint="每個判定時點都會播放"
-                                    file={normalSoundFile}
-                                    accept="audio/*"
-                                    icon={AudiotrackRoundedIcon}
-                                    disabled={isProcessing}
-                                    onChange={setNormalSoundFile}
-                                />
-                                <FilePicker
-                                    id="break-answer-file"
-                                    label="Break 正解音"
-                                    hint="Break 時額外疊加；未選擇則不疊加"
-                                    file={breakSoundFile}
-                                    accept="audio/*"
-                                    icon={BoltRoundedIcon}
-                                    optional
-                                    disabled={isProcessing}
-                                    onChange={setBreakSoundFile}
-                                />
-                            </Box>
+                            />
+                            <FilePicker
+                                id="normal-answer-file"
+                                label="一般正解音"
+                                hint="每個判定時點都會播放"
+                                file={normalSoundFile}
+                                accept="audio/*"
+                                icon={IconWave}
+                                disabled={isProcessing}
+                                onChange={setNormalSoundFile}
+                            />
+                            <FilePicker
+                                id="song-file"
+                                label="歌曲音檔（BGM）"
+                                hint="track.mp3、WAV、OGG 或 M4A"
+                                file={songFile}
+                                accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac"
+                                icon={IconMusic}
+                                optional
+                                disabled={isProcessing}
+                                onChange={setSongFile}
+                            />
+                            <FilePicker
+                                id="break-answer-file"
+                                label="Break 正解音"
+                                hint="Break 時額外疊加；未選擇則不疊加"
+                                file={breakSoundFile}
+                                accept="audio/*"
+                                icon={IconBolt}
+                                optional
+                                disabled={isProcessing}
+                                onChange={setBreakSoundFile}
+                            />
+
                             <MaiNotesSearch
                                 key={chartSource ?? 'no-chart'}
                                 disabled={isProcessing}
@@ -569,305 +601,300 @@ export default function MaimaiAudioTool() {
                                     void selectMaiChart(song, chart)
                                 }
                             />
+
                             {showPaste && (
-                                <Paper
-                                    variant="outlined"
+                                <Stack
+                                    spacing={1.5}
                                     sx={{
                                         p: 2,
-                                        mt: 2,
-                                        bgcolor: 'rgba(255,126,142,.04)',
+                                        borderTop: `1px solid ${tool.seam}`,
+                                        bgcolor: tool.redSoft,
                                     }}
                                 >
-                                    <Stack spacing={1.5}>
-                                        <Typography sx={{ fontWeight: 750 }}>
-                                            瀏覽器無法取得檔案內容？
+                                    <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+                                        瀏覽器無法取得檔案內容？
+                                    </Typography>
+                                    <Typography sx={{ fontSize: 13, color: tool.textMuted, lineHeight: 1.6 }}>
+                                        若檔案位於手機文件供應器、網路磁碟或掛載目錄，可直接貼上
+                                        maidata.txt 的完整內容。
+                                    </Typography>
+                                    <TextField
+                                        label="maidata.txt 內容"
+                                        value={maidataText}
+                                        onChange={(event) =>
+                                            setMaidataText(event.target.value)
+                                        }
+                                        multiline
+                                        minRows={5}
+                                        fullWidth
+                                        slotProps={{
+                                            input: { sx: { ...monoSx, fontSize: 13 } },
+                                        }}
+                                    />
+                                    <Button
+                                        variant="outlined"
+                                        disabled={!maidataText.trim()}
+                                        onClick={() =>
+                                            parseMaidataSource(
+                                                maidataText,
+                                                '貼上 maidata.txt',
+                                            )
+                                        }
+                                    >
+                                        解析貼上的內容
+                                    </Button>
+                                </Stack>
+                            )}
+                        </Panel>
+
+                        <Panel
+                            id="settings-title"
+                            title="譜面與輸出設定"
+                            meta={maidata ? `${maidata.charts.length} 個難度` : '尚未載入'}
+                        >
+                            <Box sx={{ p: 2 }}>
+                                <FormControl
+                                    fullWidth
+                                    disabled={
+                                        !maidata ||
+                                        isProcessing ||
+                                        chartSource?.startsWith('mai-notes')
+                                    }
+                                >
+                                    <InputLabel id="difficulty-label">難度</InputLabel>
+                                    <Select
+                                        labelId="difficulty-label"
+                                        value={difficulty}
+                                        label="難度"
+                                        onChange={(event) =>
+                                            setDifficulty(event.target.value)
+                                        }
+                                    >
+                                        {!maidata && (
+                                            <MenuItem value="">請先載入譜面</MenuItem>
+                                        )}
+                                        {maidata?.charts.map((chart) => (
+                                            <MenuItem key={chart.key} value={chart.key}>
+                                                {DIFFICULTY_NAMES[chart.difficulty] ??
+                                                    chart.key}
+                                                {chart.level ? ` · Lv ${chart.level}` : ''}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </Box>
+
+                            {stats.length > 0 && (
+                                <Box
+                                    component="dl"
+                                    sx={{
+                                        m: 0,
+                                        display: 'grid',
+                                        gridTemplateColumns: {
+                                            xs: '1fr 1fr',
+                                            sm: '1.4fr 1.4fr 1fr 1fr 1fr',
+                                        },
+                                        borderTop: `1px solid ${tool.seam}`,
+                                        '& > div': {
+                                            px: 2,
+                                            py: 1.25,
+                                            minWidth: 0,
+                                            borderBottom: `1px solid ${tool.seam}`,
+                                        },
+                                        '& > div:last-of-type:nth-of-type(odd)': {
+                                            gridColumn: { xs: '1 / -1', sm: 'auto' },
+                                        },
+                                    }}
+                                >
+                                    {stats.map((stat) => (
+                                        <Box key={stat.label}>
+                                            <Typography
+                                                component="dt"
+                                                sx={{ fontSize: 12, color: tool.textFaint }}
+                                            >
+                                                {stat.label}
+                                            </Typography>
+                                            <Typography
+                                                component="dd"
+                                                noWrap
+                                                title={stat.value}
+                                                sx={{
+                                                    m: 0,
+                                                    mt: 0.25,
+                                                    fontSize: stat.mono ? 16 : 14,
+                                                    fontWeight: 600,
+                                                    color: stat.tone ?? tool.text,
+                                                    ...(stat.mono ? monoSx : {}),
+                                                }}
+                                            >
+                                                {stat.value}
+                                            </Typography>
+                                        </Box>
+                                    ))}
+                                </Box>
+                            )}
+
+                            <Box
+                                sx={{
+                                    display: 'grid',
+                                    gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                                    columnGap: 4,
+                                    rowGap: 1,
+                                    px: 2,
+                                    pt: 2,
+                                    pb: 1,
+                                    borderTop: stats.length ? 'none' : `1px solid ${tool.seam}`,
+                                }}
+                            >
+                                <Box>
+                                    <Stack direction="row" sx={{ alignItems: 'baseline', justifyContent: 'space-between' }}>
+                                        <Typography id="answer-volume-label" sx={{ fontSize: 14, fontWeight: 600 }}>
+                                            正解音音量
+                                        </Typography>
+                                        <Typography sx={{ ...monoSx, fontSize: 14, color: tool.accent }}>
+                                            {Math.round(answerVolume * 100)}%
+                                        </Typography>
+                                    </Stack>
+                                    <Slider
+                                        value={answerVolume}
+                                        min={0.1}
+                                        max={1.5}
+                                        step={0.05}
+                                        disabled={isProcessing}
+                                        onChange={(_, value) =>
+                                            setAnswerVolume(value as number)
+                                        }
+                                        aria-label="正解音音量"
+                                    />
+                                </Box>
+                                <Box>
+                                    <Stack direction="row" sx={{ alignItems: 'baseline', justifyContent: 'space-between' }}>
+                                        <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+                                            Break 音效音量
                                         </Typography>
                                         <Typography
-                                            variant="body2"
-                                            color="text.secondary"
-                                        >
-                                            若檔案位於手機文件供應器、網路磁碟或掛載目錄，可直接貼上
-                                            maidata.txt 的完整內容。
-                                        </Typography>
-                                        <TextField
-                                            label="maidata.txt 內容"
-                                            value={maidataText}
-                                            onChange={(event) =>
-                                                setMaidataText(
-                                                    event.target.value,
-                                                )
-                                            }
-                                            multiline
-                                            minRows={5}
-                                            fullWidth
-                                        />
-                                        <Button
-                                            variant="outlined"
-                                            disabled={!maidataText.trim()}
-                                            onClick={() =>
-                                                parseMaidataSource(
-                                                    maidataText,
-                                                    '貼上 maidata.txt',
-                                                )
-                                            }
-                                        >
-                                            解析貼上的內容
-                                        </Button>
-                                    </Stack>
-                                </Paper>
-                            )}
-                        </Box>
-
-                        <Box>
-                            <Typography
-                                variant="h5"
-                                component="h2"
-                                sx={{ mb: 2 }}
-                            >
-                                2. 譜面與輸出設定
-                            </Typography>
-                            <Card variant="outlined">
-                                <CardContent>
-                                    <Stack spacing={3}>
-                                        <FormControl
-                                            fullWidth
-                                            disabled={
-                                                !maidata ||
-                                                isProcessing ||
-                                                chartSource?.startsWith(
-                                                    'mai-notes',
-                                                )
-                                            }
-                                        >
-                                            <InputLabel id="difficulty-label">
-                                                難度
-                                            </InputLabel>
-                                            <Select
-                                                labelId="difficulty-label"
-                                                value={difficulty}
-                                                label="難度"
-                                                onChange={(event) =>
-                                                    setDifficulty(
-                                                        event.target.value,
-                                                    )
-                                                }
-                                            >
-                                                {!maidata && (
-                                                    <MenuItem value="">
-                                                        請先載入譜面
-                                                    </MenuItem>
-                                                )}
-                                                {maidata?.charts.map(
-                                                    (chart) => (
-                                                        <MenuItem
-                                                            key={chart.key}
-                                                            value={chart.key}
-                                                        >
-                                                            {DIFFICULTY_NAMES[
-                                                                chart.difficulty
-                                                            ] ?? chart.key}
-                                                            {chart.level
-                                                                ? ` · Lv ${chart.level}`
-                                                                : ''}
-                                                        </MenuItem>
-                                                    ),
-                                                )}
-                                            </Select>
-                                        </FormControl>
-
-                                        {maidata &&
-                                            selectedChart &&
-                                            timeline && (
-                                                <Stack
-                                                    direction="row"
-                                                    sx={{
-                                                        gap: 1,
-                                                        flexWrap: 'wrap',
-                                                    }}
-                                                >
-                                                    <Chip
-                                                        label={
-                                                            chartSource ??
-                                                            '本機譜面'
-                                                        }
-                                                        variant="outlined"
-                                                    />
-                                                    <Chip
-                                                        label={maidata.title}
-                                                        color="primary"
-                                                    />
-                                                    <Chip
-                                                        label={`${timeline.events.length} 個時點`}
-                                                    />
-                                                    <Chip
-                                                        label={`${breakCount} 個 Break 時點`}
-                                                        color={
-                                                            breakCount
-                                                                ? 'secondary'
-                                                                : 'default'
-                                                        }
-                                                    />
-                                                    <Chip
-                                                        label={`First ${selectedChart.first.toFixed(3)}s`}
-                                                    />
-                                                </Stack>
-                                            )}
-
-                                        <Divider />
-                                        <Stack
-                                            direction={{
-                                                xs: 'column',
-                                                sm: 'row',
-                                            }}
-                                            spacing={3}
                                             sx={{
-                                                alignItems: {
-                                                    xs: 'stretch',
-                                                    sm: 'center',
-                                                },
+                                                ...monoSx,
+                                                fontSize: 14,
+                                                color: breakSoundFile ? tool.amber : tool.textFaint,
                                             }}
                                         >
-                                            <Box sx={{ flex: 1 }}>
-                                                <Stack
-                                                    direction="row"
-                                                    spacing={1}
-                                                    sx={{
-                                                        alignItems: 'center',
-                                                    }}
-                                                >
-                                                    <TuneRoundedIcon
-                                                        color="primary"
-                                                        fontSize="small"
-                                                    />
-                                                    <Typography
-                                                        sx={{ fontWeight: 750 }}
-                                                    >
-                                                        正解音音量
-                                                    </Typography>
-                                                    <Typography
-                                                        color="primary.main"
-                                                        sx={{ fontWeight: 750 }}
-                                                    >
-                                                        {Math.round(
-                                                            answerVolume * 100,
-                                                        )}
-                                                        %
-                                                    </Typography>
-                                                </Stack>
-                                                <Slider
-                                                    value={answerVolume}
-                                                    min={0.1}
-                                                    max={1.5}
-                                                    step={0.05}
-                                                    disabled={isProcessing}
-                                                    onChange={(_, value) =>
-                                                        setAnswerVolume(
-                                                            value as number,
-                                                        )
-                                                    }
-                                                    aria-label="正解音音量"
-                                                />
-                                            </Box>
-                                            <Box sx={{ flex: 1 }}>
-                                                <Stack
-                                                    direction="row"
-                                                    spacing={1}
-                                                    sx={{
-                                                        alignItems: 'center',
-                                                    }}
-                                                >
-                                                    <BoltRoundedIcon
-                                                        color="secondary"
-                                                        fontSize="small"
-                                                    />
-                                                    <Typography
-                                                        sx={{ fontWeight: 750 }}
-                                                    >
-                                                        Break 音效音量
-                                                    </Typography>
-                                                    <Typography
-                                                        color="secondary.main"
-                                                        sx={{ fontWeight: 750 }}
-                                                    >
-                                                        {Math.round(
-                                                            breakVolume * 100,
-                                                        )}
-                                                        %
-                                                    </Typography>
-                                                </Stack>
-                                                <Slider
-                                                    color="secondary"
-                                                    value={breakVolume}
-                                                    min={0.1}
-                                                    max={1.5}
-                                                    step={0.05}
-                                                    disabled={
-                                                        isProcessing ||
-                                                        !breakSoundFile
-                                                    }
-                                                    onChange={(_, value) =>
-                                                        setBreakVolume(
-                                                            value as number,
-                                                        )
-                                                    }
-                                                    aria-label="Break 音效音量"
-                                                />
-                                            </Box>
-                                            <Tooltip title="同一時點的一般正解音只播放一次；若含 Break，再額外疊加一次 Break 音效。">
-                                                <Chip
-                                                    label="同拍去重 + Break 疊加"
-                                                    variant="outlined"
-                                                />
-                                            </Tooltip>
-                                        </Stack>
+                                            {Math.round(breakVolume * 100)}%
+                                        </Typography>
                                     </Stack>
-                                </CardContent>
-                            </Card>
-                        </Box>
+                                    <Slider
+                                        color="secondary"
+                                        value={breakVolume}
+                                        min={0.1}
+                                        max={1.5}
+                                        step={0.05}
+                                        disabled={isProcessing || !breakSoundFile}
+                                        onChange={(_, value) =>
+                                            setBreakVolume(value as number)
+                                        }
+                                        aria-label="Break 音效音量"
+                                    />
+                                </Box>
+                            </Box>
+                            <Tooltip title="同一時點的一般正解音只播放一次；若含 Break，再額外疊加一次 Break 音效。">
+                                <Typography
+                                    tabIndex={0}
+                                    sx={{
+                                        px: 2,
+                                        pb: 2,
+                                        fontSize: 12,
+                                        color: tool.textMuted,
+                                        width: 'fit-content',
+                                        cursor: 'help',
+                                        textDecoration: 'underline dotted',
+                                        textUnderlineOffset: '3px',
+                                    }}
+                                >
+                                    同拍去重 + Break 疊加
+                                </Typography>
+                            </Tooltip>
+                        </Panel>
 
                         <Alert
-                            severity={
-                                error
-                                    ? 'error'
-                                    : outputs.length
-                                      ? 'success'
-                                      : 'info'
-                            }
+                            severity={severity}
                             variant="outlined"
+                            sx={{
+                                bgcolor: tool.panel,
+                                borderColor:
+                                    severity === 'error'
+                                        ? 'rgba(255,128,128,.5)'
+                                        : severity === 'success'
+                                          ? 'rgba(95,211,141,.45)'
+                                          : tool.seam,
+                                color: tool.text,
+                                fontSize: 14,
+                            }}
                         >
                             {error ?? status}
                         </Alert>
 
+                        {outputs.length > 0 && (
+                            <Panel
+                                id="results-title"
+                                title="試聽與下載"
+                                meta={`${outputs.length} 個檔案`}
+                            >
+                                {outputs.map((output) => (
+                                    <ResultPlayer key={output.url} output={output} />
+                                ))}
+                            </Panel>
+                        )}
+                    </Stack>
+
+                    <Typography
+                        sx={{
+                            mt: 3,
+                            fontSize: 12,
+                            color: tool.textFaint,
+                            textAlign: 'center',
+                        }}
+                    >
+                        音訊解碼、混音與 MP3 編碼皆在本機瀏覽器執行
+                    </Typography>
+                </Container>
+
+                <Box
+                    sx={{
+                        position: 'sticky',
+                        bottom: 0,
+                        zIndex: 10,
+                        mt: 1,
+                        borderTop: `1px solid ${tool.seam}`,
+                        bgcolor: 'rgba(17,19,23,.94)',
+                        backdropFilter: 'blur(10px)',
+                        pb: 'env(safe-area-inset-bottom)',
+                    }}
+                >
+                    <Container maxWidth="md" sx={{ px: { xs: 2, sm: 3 }, py: 1.5 }}>
                         {isProcessing && (
-                            <Box>
+                            <Box sx={{ mb: 1.25 }}>
                                 <Stack
                                     direction="row"
-                                    sx={{
-                                        justifyContent: 'space-between',
-                                        mb: 1,
-                                    }}
+                                    sx={{ justifyContent: 'space-between', gap: 2, mb: 0.75 }}
                                 >
-                                    <Typography variant="body2">
+                                    <Typography noWrap sx={{ fontSize: 13, color: tool.textMuted }}>
                                         {status}
                                     </Typography>
-                                    <Typography variant="body2">
+                                    <Typography sx={{ ...monoSx, fontSize: 13 }}>
                                         {Math.round(progress)}%
                                     </Typography>
                                 </Stack>
-                                <LinearProgress
-                                    variant="determinate"
-                                    value={progress}
-                                />
+                                <LinearProgress variant="determinate" value={progress} />
                             </Box>
                         )}
-
                         <Button
                             variant="contained"
                             color="primary"
                             size="large"
+                            fullWidth
                             disabled={isProcessing || isChartLoading}
                             onClick={() => void startProcess()}
-                            sx={{ py: 1.6, fontSize: '1rem' }}
+                            sx={{ fontSize: 16 }}
                         >
                             {isProcessing
                                 ? '正在生成…'
@@ -875,30 +902,8 @@ export default function MaimaiAudioTool() {
                                   ? '生成兩個 MP3'
                                   : '生成純正解音 MP3'}
                         </Button>
-
-                        {outputs.length > 0 && (
-                            <Stack spacing={2}>
-                                <Typography variant="h5" component="h2">
-                                    3. 試聽與下載
-                                </Typography>
-                                {outputs.map((output) => (
-                                    <ResultPlayer
-                                        key={output.url}
-                                        output={output}
-                                    />
-                                ))}
-                            </Stack>
-                        )}
-
-                        <Typography
-                            variant="caption"
-                            color="text.disabled"
-                            sx={{ textAlign: 'center' }}
-                        >
-                            音訊解碼、混音與 MP3 編碼皆在本機瀏覽器執行
-                        </Typography>
-                    </Stack>
-                </Container>
+                    </Container>
+                </Box>
             </Box>
         </ThemeProvider>
     );

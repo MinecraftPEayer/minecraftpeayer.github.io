@@ -1,0 +1,22 @@
+// Shared colors for the tool pages. Mirrored as CSS variables in tool.module.css.
+export const tool = {
+    ground: '#111317',
+    panel: '#181b20',
+    raised: '#1f2329',
+    seam: '#2a2e36',
+    seamStrong: '#3a3f4a',
+    text: '#e6e8eb',
+    textMuted: '#a3a9b3',
+    textFaint: '#868d98',
+    accent: '#6cb6ff',
+    accentInk: '#08131f',
+    accentSoft: 'rgba(108,182,255,.12)',
+    amber: '#f0b45a',
+    amberSoft: 'rgba(240,180,90,.12)',
+    green: '#5fd38d',
+    greenSoft: 'rgba(95,211,141,.12)',
+    red: '#ff8080',
+    redSoft: 'rgba(255,128,128,.1)',
+    sans: '"Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif',
+    mono: 'var(--font-nerd), ui-monospace, "SFMono-Regular", monospace',
+} as const;

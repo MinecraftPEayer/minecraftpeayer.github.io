@@ -6,13 +6,13 @@ import {
     Button,
     CircularProgress,
     LinearProgress,
-    Paper,
     Stack,
     TextField,
     Typography,
     createFilterOptions,
 } from '@mui/material';
-import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import { IconSearch } from '../_tool-ui/icons';
+import { tool } from '../_tool-ui/tokens';
 import {
     loadMaiNotesManifest,
     type MaiNotesManifest,
@@ -72,7 +72,7 @@ export function MaiNotesSearch({
     };
 
     return (
-        <Paper variant="outlined" sx={{ p: 2.5, mt: 2 }}>
+        <Box sx={{ p: 2, borderTop: `1px solid ${tool.seam}` }}>
             <Stack spacing={2}>
                 <Stack
                     direction={{ xs: 'column', sm: 'row' }}
@@ -80,17 +80,17 @@ export function MaiNotesSearch({
                     sx={{ alignItems: { sm: 'center' } }}
                 >
                     <Box sx={{ flex: 1 }}>
-                        <Typography sx={{ fontWeight: 750 }}>
-                            搜尋 mai-notes
+                        <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+                            或從 mai-notes 選擇譜面
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography sx={{ fontSize: 13, color: tool.textMuted, mt: 0.25 }}>
                             直接選擇歌曲與難度，無需上傳 maidata.txt。
                         </Typography>
                     </Box>
                     {!manifest && (
                         <Button
                             variant="outlined"
-                            startIcon={<SearchRoundedIcon />}
+                            startIcon={<IconSearch size={16} />}
                             disabled={disabled || loading || chartLoading}
                             onClick={() => void openSearch()}
                         >
@@ -135,7 +135,7 @@ export function MaiNotesSearch({
                         />
                         {song && (
                             <Stack spacing={1}>
-                                <Typography sx={{ fontWeight: 750 }}>
+                                <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
                                     {song.title} · 選擇譜面
                                 </Typography>
                                 {charts.length === 0 ? (
@@ -176,11 +176,11 @@ export function MaiNotesSearch({
                         spacing={1}
                         sx={{ alignItems: 'center' }}
                     >
-                        <CircularProgress size={18} />
-                        <Typography variant="body2">正在載入譜面…</Typography>
+                        <CircularProgress size={16} />
+                        <Typography sx={{ fontSize: 13, color: tool.textMuted }}>正在載入譜面…</Typography>
                     </Stack>
                 )}
             </Stack>
-        </Paper>
+        </Box>
     );
 }

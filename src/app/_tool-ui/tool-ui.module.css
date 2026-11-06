@@ -1,0 +1,124 @@
+/* Shared tool-page chrome. Values mirror tokens.ts. */
+.surface {
+    --ground: #111317;
+    --panel: #181b20;
+    --raised: #1f2329;
+    --seam: #2a2e36;
+    --seam-strong: #3a3f4a;
+    --text: #e6e8eb;
+    --text-muted: #a3a9b3;
+    --text-faint: #868d98;
+    --accent: #6cb6ff;
+    --accent-ink: #08131f;
+    --accent-soft: rgba(108, 182, 255, 0.12);
+    --amber: #f0b45a;
+    --green: #5fd38d;
+    --green-soft: rgba(95, 211, 141, 0.12);
+    --red: #ff8080;
+    --red-soft: rgba(255, 128, 128, 0.1);
+    --sans: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
+    --mono: var(--font-nerd), ui-monospace, 'SFMono-Regular', monospace;
+
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: var(--ground);
+    color: var(--text);
+    font-family: var(--sans);
+    color-scheme: dark;
+    accent-color: var(--accent);
+    caret-color: var(--accent);
+    scrollbar-color: var(--seam-strong) transparent;
+    -webkit-tap-highlight-color: transparent;
+}
+.surface ::selection { background: rgba(108, 182, 255, 0.32); color: #fff; }
+.surface :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Title */
+.intro { padding: 32px 0 20px; }
+.title {
+    margin: 0;
+    font-size: clamp(26px, 6.4vw, 40px);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+    text-wrap: balance;
+}
+.lede {
+    margin: 10px 0 0;
+    max-width: 62ch;
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+/* Pipeline strip: the signature */
+.pipeline {
+    display: grid;
+    grid-template-columns: repeat(var(--count, 4), minmax(0, 1fr));
+    gap: 6px;
+    margin: 0 0 20px;
+    padding: 0;
+    list-style: none;
+}
+.stage {
+    position: relative;
+    min-width: 0;
+    padding: 10px 10px 9px;
+    border: 1px solid var(--seam);
+    border-radius: 8px;
+    background: var(--panel);
+    color: var(--text-faint);
+    transition: border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.3s;
+}
+.stage + .stage::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 100%;
+    width: 6px;
+    height: 1px;
+    background: var(--seam-strong);
+    transition: background-color 0.3s;
+}
+.stageHead { display: flex; align-items: center; gap: 6px; }
+.stageHead svg { flex: 0 0 auto; }
+.stageLabel {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+.stageValue {
+    display: block;
+    margin-top: 4px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}
+.done { border-color: rgba(95, 211, 141, 0.45); color: var(--green); }
+.done .stageLabel { color: var(--text); }
+.done + .stage::before { background: var(--green); }
+.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.active .stageLabel { color: var(--text); }
+.error { border-color: rgba(255, 128, 128, 0.55); color: var(--red); }
+.error .stageLabel { color: var(--text); }
+.spin { animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 480px) {
+    .pipeline { gap: 4px; }
+    .stage { padding: 8px 7px 7px; }
+    .stage + .stage::before { width: 4px; }
+    .stageLabel { font-size: 12px; }
+    .stageValue { font-size: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .spin { animation-duration: 2.4s; }
+    .stage, .stage + .stage::before { transition: none; }
+}
