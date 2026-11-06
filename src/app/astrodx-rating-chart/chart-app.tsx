@@ -143,7 +143,7 @@ export default function ChartApp() {
         },
         {
             label: '比對',
-            state: !ready ? 'pending' : patternError ? 'error' : unmatched.length || needsType ? 'active' : 'done',
+            state: !ready ? 'pending' : patternError ? 'error' : needsType ? 'active' : 'done',
             value: !ready ? undefined : patternError ? '正則錯誤'
                 : unmatched.length ? `${unmatched.length} 首未比對`
                 : needsType ? '選擇 DX/SD' : `${entries.length} 可計算`,
@@ -155,7 +155,7 @@ export default function ChartApp() {
         },
         {
             label: '下載',
-            state: ready && !drawing && !drawError && !patternError ? 'active' : 'pending',
+            state: ready && !drawing && !drawError && !patternError && !needsType ? 'active' : 'pending',
             value: ready && !drawing && !drawError && !patternError ? 'PNG · CSV' : undefined,
         },
     ];
@@ -204,8 +204,8 @@ export default function ChartApp() {
                     </div>
                     <div className={styles.metrics}>
                         <div><small>可計算成績</small><strong>{entries.length}</strong></div>
-                        <div className={unmatched.length ? styles.metricWarn : ''}><small>資料庫找不到</small><strong>{unmatched.length}</strong></div>
-                        <div className={skipped.length ? styles.metricWarn : ''}><small>需要檢查</small><strong>{skipped.length}</strong></div>
+                        <div><small>資料庫找不到</small><strong>{unmatched.length}</strong></div>
+                        <div><small>需要檢查</small><strong>{skipped.length}</strong></div>
                     </div>
                     <div className={styles.panelBody}>
                         <p className={styles.intro}>預設會忽略曲名尾端的 [DX]、[SD] 等標記，並統一全半形與空白。若匯出檔使用其他命名方式，可輸入擷取規則；第一個括號群組會作為曲名。</p>

@@ -13,7 +13,7 @@
 .panel {
     margin: 0 0 16px;
     border: 1px solid var(--seam);
-    border-radius: 8px;
+    border-radius: 6px;
     background: var(--panel);
     overflow: hidden;
 }
@@ -39,7 +39,7 @@
     min-height: 88px;
     padding: 16px;
     border: 1px dashed var(--seam-strong);
-    border-radius: 8px;
+    border-radius: 6px;
     background: var(--raised);
     cursor: pointer;
     transition: border-color 0.2s, background-color 0.2s;
@@ -55,7 +55,7 @@
     width: 40px;
     height: 40px;
     border: 1px solid var(--seam-strong);
-    border-radius: 8px;
+    border-radius: 6px;
     color: var(--accent);
 }
 .dropText { min-width: 0; }
@@ -72,7 +72,7 @@
 .textInput, .matchInput, .row select {
     border: 1px solid var(--seam-strong);
     background: var(--raised);
-    border-radius: 8px;
+    border-radius: 6px;
     color: var(--text);
     font: inherit;
     transition: border-color 0.15s;
@@ -88,7 +88,7 @@
     color: #ffc4c4;
     background: var(--red-soft);
     border: 1px solid rgba(255, 128, 128, 0.45);
-    border-radius: 8px;
+    border-radius: 6px;
     font-size: 13px;
     line-height: 1.6;
 }
@@ -108,7 +108,6 @@
     font-size: 22px;
     font-weight: 600;
 }
-.metricWarn strong { color: var(--amber); }
 .total { color: var(--accent); }
 
 /* Disclosure lists */
@@ -163,7 +162,7 @@
     gap: 8px;
     min-height: 44px;
     padding: 0 18px;
-    border-radius: 8px;
+    border-radius: 6px;
     font: inherit;
     font-size: 15px;
     font-weight: 600;

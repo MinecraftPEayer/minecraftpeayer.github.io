@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "maichart",
+        "createdAt": "2026-11-06T18:22:46.501Z",
+        "reason": "Canvas-only face for the Rating chart PNG (draw-chart.ts); PNG look is a fixed product constraint in PRODUCT.md, not page UI"
+      }
+    ]
+  }
+}

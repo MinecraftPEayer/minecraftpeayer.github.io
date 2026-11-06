@@ -1,4 +1,4 @@
-// Shared colors for the tool pages. Mirrored as CSS variables in tool.module.css.
+// Shared colors for the tool pages. Mirrored as CSS variables in tool-ui.module.css.
 export const tool = {
     ground: '#111317',
     panel: '#181b20',
@@ -17,6 +17,6 @@ export const tool = {
     greenSoft: 'rgba(95,211,141,.12)',
     red: '#ff8080',
     redSoft: 'rgba(255,128,128,.1)',
-    sans: '"Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif',
-    mono: 'var(--font-nerd), ui-monospace, "SFMono-Regular", monospace',
+    sans: 'ToolPunct, var(--font-tool-sans), "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif',
+    mono: 'var(--font-tool-mono), var(--font-nerd), ui-monospace, "SFMono-Regular", monospace',
 } as const;

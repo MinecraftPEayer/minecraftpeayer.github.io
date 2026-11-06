@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-07T00:00:00Z",
+  "title": "Design System: MinecraftPEayer Tools",
+  "extensions": {
+    "scope": "Tool pages only (answer-sound-generator, astrodx-rating-chart, future tools). Not the home page; not the canvas-drawn Rating chart PNG.",
+    "colorMeta": {
+      "graphite-ground": { "role": "neutral", "displayName": "Graphite Ground", "canonical": "#111317", "tonalRamp": ["#08090b", "#111317", "#181b20", "#1f2329", "#2a2e36", "#3a3f4a", "#868d98", "#e6e8eb"] },
+      "panel": { "role": "neutral", "displayName": "Panel", "canonical": "#181b20", "tonalRamp": ["#08090b", "#111317", "#181b20", "#1f2329", "#2a2e36", "#3a3f4a", "#868d98", "#e6e8eb"] },
+      "raised": { "role": "neutral", "displayName": "Raised", "canonical": "#1f2329", "tonalRamp": ["#08090b", "#111317", "#181b20", "#1f2329", "#2a2e36", "#3a3f4a", "#868d98", "#e6e8eb"] },
+      "seam": { "role": "neutral", "displayName": "Seam", "canonical": "#2a2e36", "tonalRamp": ["#08090b", "#111317", "#181b20", "#1f2329", "#2a2e36", "#3a3f4a", "#868d98", "#e6e8eb"] },
+      "seam-strong": { "role": "neutral", "displayName": "Seam Strong", "canonical": "#3a3f4a", "tonalRamp": ["#08090b", "#111317", "#181b20", "#1f2329", "#2a2e36", "#3a3f4a", "#4a505c", "#868d98"] },
+      "text": { "role": "neutral", "displayName": "Text", "canonical": "#e6e8eb", "tonalRamp": ["#2a2e36", "#3a3f4a", "#5a606b", "#868d98", "#a3a9b3", "#c4c8ce", "#e6e8eb", "#f5f6f7"] },
+      "text-muted": { "role": "neutral", "displayName": "Text Muted", "canonical": "#a3a9b3", "tonalRamp": ["#2a2e36", "#3a3f4a", "#5a606b", "#868d98", "#a3a9b3", "#c4c8ce", "#e6e8eb", "#f5f6f7"] },
+      "text-faint": { "role": "neutral", "displayName": "Text Faint", "canonical": "#868d98", "tonalRamp": ["#2a2e36", "#3a3f4a", "#5a606b", "#868d98", "#a3a9b3", "#c4c8ce", "#e6e8eb", "#f5f6f7"] },
+      "signal-blue": { "role": "primary", "displayName": "Signal Blue", "canonical": "#6cb6ff", "tonalRamp": ["#08131f", "#0f2a47", "#17426f", "#245f9c", "#3d86d0", "#6cb6ff", "#95caff", "#d6eaff"] },
+      "signal-blue-hover": { "role": "primary", "displayName": "Signal Blue Hover", "canonical": "#95caff", "tonalRamp": ["#08131f", "#0f2a47", "#17426f", "#245f9c", "#3d86d0", "#6cb6ff", "#95caff", "#d6eaff"] },
+      "accent-ink": { "role": "primary", "displayName": "Accent Ink", "canonical": "#08131f", "tonalRamp": ["#08131f", "#0f2a47", "#17426f", "#245f9c", "#3d86d0", "#6cb6ff", "#95caff", "#d6eaff"] },
+      "accent-soft": { "role": "primary", "displayName": "Accent Soft", "canonical": "rgba(108,182,255,.12)" },
+      "break-amber": { "role": "tertiary", "displayName": "Break Amber", "canonical": "#f0b45a", "tonalRamp": ["#1d1304", "#3d2a0b", "#634514", "#8c6320", "#bb8834", "#f0b45a", "#f6cd8f", "#fbe9cc"] },
+      "success-green": { "role": "secondary", "displayName": "Success Green", "canonical": "#5fd38d", "tonalRamp": ["#04170c", "#0b331c", "#145230", "#207447", "#3a9f66", "#5fd38d", "#95e3b3", "#d3f5e0"] },
+      "green-soft": { "role": "secondary", "displayName": "Green Soft", "canonical": "rgba(95,211,141,.12)" },
+      "error-red": { "role": "secondary", "displayName": "Error Red", "canonical": "#ff8080", "tonalRamp": ["#240707", "#4a1212", "#731f1f", "#a03131", "#d65454", "#ff8080", "#ffc4c4", "#ffe6e6"] },
+      "red-soft": { "role": "secondary", "displayName": "Red Soft", "canonical": "rgba(255,128,128,.1)" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page title only (ToolIntro h1), text-wrap balance." },
+      "body": { "displayName": "Body", "purpose": "Lede (max 62ch) and help copy." },
+      "title": { "displayName": "Title", "purpose": "Panel headers, row/file labels, disclosure summaries." },
+      "label": { "displayName": "Label", "purpose": "Hints, metric captions, footer note." },
+      "figure-lg": { "displayName": "Figure", "purpose": "Metric figures (22px, 19px on phones); action-bar totals at 20px." },
+      "mono": { "displayName": "Mono", "purpose": "Panel meta counts, file names, stage values (11px), readouts." }
+    },
+    "fonts": [
+      { "name": "Noto Sans TC", "source": "next/font/google, weights 400/600/700, variable --font-tool-sans" },
+      { "name": "JetBrains Mono", "source": "next/font/google, weights 400/600, variable --font-tool-mono" },
+      { "name": "ToolPunct", "source": "local Arial/Helvetica/Roboto/Noto Sans/Liberation Sans/DejaVu Sans, unicode-range U+00B7; first in sans stack to keep the middle dot narrow" }
+    ],
+    "shadows": [],
+    "focus": [
+      { "name": "focus-visible", "value": "outline: 2px solid #6cb6ff; outline-offset: 2px", "purpose": "Global keyboard focus on tool surfaces." },
+      { "name": "input-focus", "value": "border-color: #6cb6ff; box-shadow: 0 0 0 1px #6cb6ff", "purpose": "Text/select focus stroke; not elevation." }
+    ],
+    "motion": [
+      { "name": "ease-out-expo", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Pipeline stage state changes (0.3s) and disclosure chevron (0.2s)." },
+      { "name": "duration-fast", "value": "0.15s", "purpose": "Button and input hover color/border changes." },
+      { "name": "spin", "value": "0.9s linear infinite (2.4s under reduced motion)", "purpose": "Busy-stage spinner icon." }
+    ],
+    "breakpoints": [
+      { "name": "phone-narrow", "value": "480px" },
+      { "name": "phone", "value": "640px" },
+      { "name": "container-md", "value": "900px" },
+      { "name": "shell", "value": "960px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one filled action per viewport, in the sticky action bar.",
+      "html": "<button class=\"ds-btn-primary\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 4v11\"/><path d=\"m7 10 5 5 5-5\"/><path d=\"M5 20h14\"/></svg>下載組成表</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border: 0; border-radius: 6px; background: #6cb6ff; color: #08131f; font-family: 'Noto Sans TC', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: background-color .15s, opacity .15s; } .ds-btn-primary:hover { background: #95caff; } .ds-btn-primary:focus-visible { outline: 2px solid #6cb6ff; outline-offset: 2px; } .ds-btn-primary:disabled { opacity: .45; cursor: not-allowed; }"
+    },
+    {
+      "name": "Outlined Button",
+      "kind": "button",
+      "refersTo": "button-outlined",
+      "description": "Every non-primary action: pick file, download a single result, CSV export.",
+      "html": "<button class=\"ds-btn-outlined\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/></svg>選擇檔案</button>",
+      "css": ".ds-btn-outlined { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border: 1px solid #3a3f4a; border-radius: 6px; background: transparent; color: #6cb6ff; font-family: 'Noto Sans TC', system-ui, sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: border-color .15s; } .ds-btn-outlined:hover { border-color: #6cb6ff; } .ds-btn-outlined:focus-visible { outline: 2px solid #6cb6ff; outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Raised field with seam-strong stroke; mono for patterns and pasted text.",
+      "html": "<input class=\"ds-input\" placeholder=\"貼上 maidata.txt 內容\" />",
+      "css": ".ds-input { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #3a3f4a; border-radius: 6px; background: #1f2329; color: #e6e8eb; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 14px; transition: border-color .15s; } .ds-input::placeholder { color: #868d98; } .ds-input:hover { border-color: #4a505c; } .ds-input:focus { outline: none; border-color: #6cb6ff; box-shadow: 0 0 0 1px #6cb6ff; }"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Seamed console panel: label left, mono count right, rows divided by seams.",
+      "html": "<section class=\"ds-panel\"><header class=\"ds-panel-head\"><h2>準備來源</h2><span>2 / 4</span></header><div class=\"ds-panel-row\">Simai 譜面<small>maidata.txt</small></div><div class=\"ds-panel-row\">一般正解音<small>answer.wav</small></div></section>",
+      "css": ".ds-panel { border: 1px solid #2a2e36; border-radius: 6px; background: #181b20; color: #e6e8eb; overflow: hidden; font-family: 'Noto Sans TC', system-ui, sans-serif; } .ds-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 16px; border-bottom: 1px solid #2a2e36; } .ds-panel-head h2 { margin: 0; font-size: 14px; font-weight: 600; } .ds-panel-head span { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #868d98; font-variant-numeric: tabular-nums; } .ds-panel-row { padding: 12px 16px; font-size: 14px; font-weight: 600; } .ds-panel-row + .ds-panel-row { border-top: 1px solid #2a2e36; } .ds-panel-row small { display: block; margin-top: 2px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; font-weight: 400; color: #e6e8eb; }"
+    },
+    {
+      "name": "Pipeline Strip",
+      "kind": "custom",
+      "refersTo": "pipeline-stage",
+      "description": "Signature: stage boxes joined by connectors; done = green border + muted value, active = blue.",
+      "html": "<ol class=\"ds-pipe\"><li class=\"ds-stage ds-done\"><b><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m8.5 12.2 2.4 2.4 4.6-4.8\"/></svg>來源</b><span>譜面 + 音效</span></li><li class=\"ds-stage ds-active\"><b><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><circle cx=\"12\" cy=\"12\" r=\"3\" fill=\"currentColor\"/></svg>設定</b><span>MASTER 13+</span></li><li class=\"ds-stage\"><b><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><circle cx=\"12\" cy=\"12\" r=\"9\"/></svg>生成</b><span>尚未開始</span></li></ol>",
+      "css": ".ds-pipe { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; font-family: 'Noto Sans TC', system-ui, sans-serif; } .ds-stage { position: relative; min-width: 0; padding: 10px 10px 9px; border: 1px solid #2a2e36; border-radius: 6px; background: #181b20; color: #868d98; transition: border-color .3s cubic-bezier(0.16,1,0.3,1), background-color .3s cubic-bezier(0.16,1,0.3,1); } .ds-stage + .ds-stage::before { content: ''; position: absolute; top: 50%; right: 100%; width: 14px; height: 2px; margin-top: -1px; background: #3a3f4a; } .ds-stage b { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #a3a9b3; } .ds-stage span { display: block; margin-top: 4px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; font-variant-numeric: tabular-nums; } .ds-done { border-color: rgba(95,211,141,.45); color: #5fd38d; } .ds-done b { color: #e6e8eb; } .ds-done span { color: #a3a9b3; } .ds-done + .ds-stage::before { background: #5fd38d; } .ds-active { border-color: #6cb6ff; background: rgba(108,182,255,.12); color: #6cb6ff; } .ds-active b { color: #e6e8eb; } .ds-stage.ds-active::before { background: #6cb6ff; }"
+    },
+    {
+      "name": "Metrics Row",
+      "kind": "custom",
+      "description": "Seamed 3-column grid of mono figures; the total in signal blue.",
+      "html": "<div class=\"ds-metrics\"><div><small>成績數</small><strong>312</strong></div><div><small>已配對</small><strong>298</strong></div><div><small>Rating</small><strong class=\"ds-total\">14,215</strong></div></div>",
+      "css": ".ds-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid #2a2e36; border-radius: 6px; background: #181b20; color: #e6e8eb; font-family: 'Noto Sans TC', system-ui, sans-serif; } .ds-metrics > div { padding: 12px 16px; min-width: 0; } .ds-metrics > div + div { border-left: 1px solid #2a2e36; } .ds-metrics small { display: block; margin-bottom: 4px; font-size: 12px; color: #868d98; } .ds-metrics strong { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 600; } .ds-total { color: #6cb6ff; }"
+    },
+    {
+      "name": "Sticky Action Bar",
+      "kind": "nav",
+      "description": "Full-width bottom bar holding the single primary action; there is no top navigation.",
+      "html": "<div class=\"ds-action-bar\"><div><small>Rating</small><strong>14,215</strong></div><button>下載組成表</button></div>",
+      "css": ".ds-action-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 24px; border-top: 1px solid #2a2e36; background: rgba(17,19,23,.94); backdrop-filter: blur(10px); color: #e6e8eb; font-family: 'Noto Sans TC', system-ui, sans-serif; } .ds-action-bar small { display: block; font-size: 11px; color: #868d98; } .ds-action-bar strong { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 600; color: #6cb6ff; } .ds-action-bar button { min-height: 44px; padding: 0 18px; border: 0; border-radius: 6px; background: #6cb6ff; color: #08131f; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; } .ds-action-bar button:hover { background: #95caff; } .ds-action-bar button:focus-visible { outline: 2px solid #6cb6ff; outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Pipeline Console",
+    "overview": "A dark working console where each tool's job runs as a visible pipeline. The visitor sees which stage they are in, fills the open stage, watches stages turn green, and downloads. Everything sits on a graphite ground, with panels one tonal step up, divided by 1px seams. There are no shadows, no gradients, and no floating cards.\n\nThe density is compact, like developer tools: small semibold labels, mono figures, seamed rows instead of separate boxes. Color does work and nothing else. One signal blue marks the primary action and the active stage. Green and red appear only for success and error. Amber appears only for Break. Everything else is graphite and grey text.\n\nThe tool pages have no navigation bar and no home link. That is the user's decision. Each page starts with its title.",
+    "keyCharacteristics": [
+      "Graphite ground, tonal panel steps, 1px seams, zero shadows.",
+      "A pipeline strip of stage boxes as the signature, driven live by app state.",
+      "Panel headers: semibold label left, mono count right.",
+      "One filled signal-blue button per viewport, pinned in a sticky bottom action bar.",
+      "Noto Sans TC for UI; JetBrains Mono (tabular) for figures, file names, and counts.",
+      "A single 6px radius everywhere."
+    ],
+    "rules": [
+      { "name": "The Reserved Hue Rule", "body": "Green means success, red means error, amber means Break. None of them is ever used for decoration, emphasis, or variety.", "section": "colors" },
+      { "name": "The Muted Done Rule", "body": "A done stage turns its border and icon green, but its value stays text-muted. Completion is signalled by the icon, not by bright text.", "section": "colors" },
+      { "name": "The Mono Means Data Rule", "body": "File names, counts, durations, ratings, and stage values are set in JetBrains Mono with tabular numerals. Prose and labels never are.", "section": "typography" },
+      { "name": "The Seam Not Shadow Rule", "body": "Panels are separated by a 1px border or a tonal step, never by a shadow.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do start every tool page with title and lede, then the pipeline strip, then panels.",
+      "Do keep exactly one filled signal-blue button per viewport, in the sticky action bar.",
+      "Do separate surfaces with 1px seams and tonal steps.",
+      "Do set counts, file names, and figures in JetBrains Mono with tabular numerals.",
+      "Do use the 6px radius for every bordered element.",
+      "Do load fonts through next/font and keep ToolPunct first in the sans stack."
+    ],
+    "donts": [
+      "Don't add a navigation bar or home link to tool pages.",
+      "Don't use amber for anything but Break, or green/red for anything but success/error.",
+      "Don't brighten done-stage values. They stay muted.",
+      "Don't add shadows, gradients, or floating cards.",
+      "Don't apply these rules to the home page or to the canvas-drawn Rating chart PNG."
+    ]
+  }
+}

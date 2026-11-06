@@ -27,7 +27,7 @@ export const toolTheme = createTheme({
             disabled: tool.textFaint,
         },
     },
-    shape: { borderRadius: 8 },
+    shape: { borderRadius: 6 },
     typography: {
         fontFamily: tool.sans,
         h1: { fontWeight: 700, letterSpacing: '-0.02em' },
@@ -44,7 +44,7 @@ export const toolTheme = createTheme({
         MuiButton: {
             defaultProps: { disableElevation: true },
             styleOverrides: {
-                root: { minHeight: 40, borderRadius: 8 },
+                root: { minHeight: 40, borderRadius: 6 },
                 sizeLarge: { minHeight: 48 },
                 outlined: {
                     borderColor: tool.seamStrong,
@@ -125,7 +125,7 @@ export function Panel({
             aria-labelledby={id}
             sx={{
                 border: `1px solid ${tool.seam}`,
-                borderRadius: 2,
+                borderRadius: 1,
                 bgcolor: tool.panel,
                 overflow: 'hidden',
             }}
@@ -214,7 +214,7 @@ export function FilePicker({
                     flex: '0 0 auto',
                     width: 32,
                     height: 32,
-                    borderRadius: 1.5,
+                    borderRadius: 1,
                     border: `1px solid ${file ? 'rgba(95,211,141,.45)' : tool.seam}`,
                     color: file ? tool.green : tool.textMuted,
                     transition: 'color .3s, border-color .3s',
@@ -314,7 +314,7 @@ export function ResultPlayer({ output }: { output: OutputFile }) {
                     component="a"
                     href={output.url}
                     download={output.filename}
-                    variant="contained"
+                    variant="outlined"
                     startIcon={<IconDownload size={16} />}
                     sx={{ flex: '0 0 auto' }}
                 >
@@ -326,7 +326,22 @@ export function ResultPlayer({ output }: { output: OutputFile }) {
                 src={output.url}
                 controls
                 preload="metadata"
-                sx={{ width: '100%', height: 40, colorScheme: 'dark', display: 'block' }}
+                sx={{
+                    width: '100%',
+                    height: 40,
+                    colorScheme: 'dark',
+                    display: 'block',
+                    borderRadius: 1,
+                    bgcolor: tool.raised,
+                    border: `1px solid ${tool.seam}`,
+                    '&::-webkit-media-controls-enclosure': {
+                        borderRadius: '6px',
+                        backgroundColor: tool.raised,
+                    },
+                    '&::-webkit-media-controls-panel': {
+                        backgroundColor: tool.raised,
+                    },
+                }}
             />
         </Box>
     );

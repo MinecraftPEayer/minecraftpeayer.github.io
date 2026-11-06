@@ -1,4 +1,12 @@
 /* Shared tool-page chrome. Values mirror tokens.ts. */
+
+/* Keep the middle dot narrow between Latin words (the CJK face draws it full-width). */
+@font-face {
+    font-family: ToolPunct;
+    src: local('Arial'), local('Helvetica'), local('Roboto'), local('Noto Sans'), local('Liberation Sans'), local('DejaVu Sans');
+    unicode-range: U+00B7;
+}
+
 .surface {
     --ground: #111317;
     --panel: #181b20;
@@ -16,8 +24,8 @@
     --green-soft: rgba(95, 211, 141, 0.12);
     --red: #ff8080;
     --red-soft: rgba(255, 128, 128, 0.1);
-    --sans: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
-    --mono: var(--font-nerd), ui-monospace, 'SFMono-Regular', monospace;
+    --sans: ToolPunct, var(--font-tool-sans), 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
+    --mono: var(--font-tool-mono), var(--font-nerd), ui-monospace, 'SFMono-Regular', monospace;
 
     min-height: 100vh;
     min-height: 100dvh;
@@ -29,6 +37,11 @@
     caret-color: var(--accent);
     scrollbar-color: var(--seam-strong) transparent;
     -webkit-tap-highlight-color: transparent;
+}
+:global(html):has(.surface) {
+    color-scheme: dark;
+    background: #111317;
+    scrollbar-color: #3a3f4a #111317;
 }
 .surface ::selection { background: rgba(108, 182, 255, 0.32); color: #fff; }
 .surface :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -55,7 +68,7 @@
 .pipeline {
     display: grid;
     grid-template-columns: repeat(var(--count, 4), minmax(0, 1fr));
-    gap: 6px;
+    gap: 14px;
     margin: 0 0 20px;
     padding: 0;
     list-style: none;
@@ -65,7 +78,7 @@
     min-width: 0;
     padding: 10px 10px 9px;
     border: 1px solid var(--seam);
-    border-radius: 8px;
+    border-radius: 6px;
     background: var(--panel);
     color: var(--text-faint);
     transition: border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.3s;
@@ -75,8 +88,9 @@
     position: absolute;
     top: 50%;
     right: 100%;
-    width: 6px;
-    height: 1px;
+    width: 14px;
+    height: 2px;
+    margin-top: -1px;
     background: var(--seam-strong);
     transition: background-color 0.3s;
 }
@@ -102,7 +116,9 @@
 }
 .done { border-color: rgba(95, 211, 141, 0.45); color: var(--green); }
 .done .stageLabel { color: var(--text); }
+.done .stageValue { color: var(--text-muted); }
 .done + .stage::before { background: var(--green); }
+.stage.active::before { background: var(--accent); }
 .active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 .active .stageLabel { color: var(--text); }
 .error { border-color: rgba(255, 128, 128, 0.55); color: var(--red); }
@@ -111,9 +127,9 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 480px) {
-    .pipeline { gap: 4px; }
+    .pipeline { gap: 8px; }
     .stage { padding: 8px 7px 7px; }
-    .stage + .stage::before { width: 4px; }
+    .stage + .stage::before { width: 8px; }
     .stageLabel { font-size: 12px; }
     .stageValue { font-size: 10px; }
 }

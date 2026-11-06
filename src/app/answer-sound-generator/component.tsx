@@ -43,6 +43,7 @@ import {
 import { tool } from '../_tool-ui/tokens';
 import {
     IconBolt,
+    IconDownload,
     IconFile,
     IconFolder,
     IconMusic,
@@ -528,7 +529,7 @@ export default function MaimaiAudioTool() {
                                 </Box>
                                 <Button
                                     component="label"
-                                    variant="contained"
+                                    variant="outlined"
                                     startIcon={<IconFolder size={17} />}
                                     disabled={isProcessing}
                                     sx={{ flex: '0 0 auto' }}
@@ -887,21 +888,61 @@ export default function MaimaiAudioTool() {
                                 <LinearProgress variant="determinate" value={progress} />
                             </Box>
                         )}
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            size="large"
-                            fullWidth
-                            disabled={isProcessing || isChartLoading}
-                            onClick={() => void startProcess()}
-                            sx={{ fontSize: 16 }}
-                        >
-                            {isProcessing
-                                ? '正在生成…'
-                                : songFile
-                                  ? '生成兩個 MP3'
-                                  : '生成純正解音 MP3'}
-                        </Button>
+                        {!isProcessing && outputs.length > 1 && (
+                            <Button
+                                component="a"
+                                href={outputs[0].url}
+                                download={outputs[0].filename}
+                                variant="contained"
+                                size="large"
+                                fullWidth
+                                startIcon={<IconDownload size={17} />}
+                                sx={{ mb: 1, fontSize: 15 }}
+                            >
+                                下載{outputs[0].title}
+                            </Button>
+                        )}
+                        <Stack direction="row" sx={{ gap: 1 }}>
+                            <Button
+                                variant={
+                                    outputs.length || !(sourcesReady && chartReady)
+                                        ? 'outlined'
+                                        : 'contained'
+                                }
+                                color="primary"
+                                size="large"
+                                disabled={isProcessing || isChartLoading}
+                                onClick={() => void startProcess()}
+                                sx={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    fontSize: outputs.length ? 14 : 16,
+                                }}
+                            >
+                                {isProcessing
+                                    ? '正在生成…'
+                                    : outputs.length
+                                      ? '重新生成'
+                                      : songFile
+                                        ? '生成兩個 MP3'
+                                        : '生成純正解音 MP3'}
+                            </Button>
+                            {!isProcessing &&
+                                outputs.slice(outputs.length > 1 ? 1 : 0).map((output) => (
+                                    <Button
+                                        key={output.url}
+                                        component="a"
+                                        href={output.url}
+                                        download={output.filename}
+                                        variant={outputs.length > 1 ? 'outlined' : 'contained'}
+                                        size="large"
+                                        startIcon={<IconDownload size={17} />}
+                                        sx={{ flex: 1.6, minWidth: 0, fontSize: 14, whiteSpace: 'nowrap' }}
+                                    >
+                                        下載{output.title}
+                                    </Button>
+                                ))}
+                        </Stack>
                     </Container>
                 </Box>
             </Box>

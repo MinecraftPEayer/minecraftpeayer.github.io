@@ -6,9 +6,10 @@ import {
     IconRing,
     IconSpinner,
 } from './icons';
+import { toolFontClass } from './fonts';
 import styles from './tool-ui.module.css';
 
-export const surfaceClass = styles.surface;
+export const surfaceClass = `${styles.surface} ${toolFontClass}`;
 
 export function ToolIntro({ title, children }: { title: ReactNode; children: ReactNode }) {
     return (
